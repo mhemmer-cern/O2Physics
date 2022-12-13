@@ -43,4 +43,4 @@ DECLARE_SOA_TABLE(CaloMeson, "AOD", "CALOMESON", //!
                   calomeson::Oa, calomeson::Px, calomeson::Py, calomeson::Pz, calomeson::E, calomeson::Alpha,
                   calomeson::Minv, calomeson::Eta, calomeson::Phi, calomeson::Pt)
 } // namespace o2::aod
-#endif  // PWGEM_PHOTONMESON_DATAMODEL_MESONTABLES_H_
+#endif // PWGEM_PHOTONMESON_DATAMODEL_MESONTABLES_H_

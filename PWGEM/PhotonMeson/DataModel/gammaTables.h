@@ -170,4 +170,4 @@ DECLARE_SOA_TABLE(SkimEMCClusters, "AOD", "SKIMEMCCLUSTERS", //!
                   gammacaloreco::IsExotic, gammacaloreco::DistanceToBadChannel, gammacaloreco::NLM, gammacaloreco::Definition);
 
 } // namespace o2::aod
-#endif  // PWGEM_PHOTONMESON_DATAMODEL_GAMMATABLES_H_
+#endif // PWGEM_PHOTONMESON_DATAMODEL_GAMMATABLES_H_
