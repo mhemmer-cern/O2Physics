@@ -14,6 +14,8 @@
 
 #include "Framework/AnalysisTask.h"
 
+#include <vector>
+
 #ifndef PWGEM_PHOTONMESON_UTILS_EMCALHISTODEFINITIONS_H_
 #define PWGEM_PHOTONMESON_UTILS_EMCALHISTODEFINITIONS_H_
 

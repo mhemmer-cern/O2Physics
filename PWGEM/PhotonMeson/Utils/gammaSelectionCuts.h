@@ -16,6 +16,8 @@
 
 #include "PWGEM/PhotonMeson/DataModel/gammaTables.h"
 
+#include <vector>
+
 #ifndef PWGEM_PHOTONMESON_UTILS_GAMMASELECTIONCUTS_H_
 #define PWGEM_PHOTONMESON_UTILS_GAMMASELECTIONCUTS_H_
 

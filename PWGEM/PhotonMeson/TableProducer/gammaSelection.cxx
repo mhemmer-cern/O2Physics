@@ -14,6 +14,7 @@
 /// \author marvin.hemmer@cern.ch
 
 // TODO: add PCM table
+#include "PWGEM/PhotonMeson/Utils/gammaSelectionCuts.h"
 
 #include "Framework/runDataProcessing.h"
 #include "Framework/AnalysisTask.h"
@@ -25,7 +26,6 @@
 #include "CCDB/BasicCCDBManager.h"
 
 #include "PWGEM/PhotonMeson/DataModel/gammaTables.h"
-#include "PWGEM/PhotonMeson/Utils/gammaSelectionCuts.h"
 #include "PWGEM/PhotonMeson/Utils/emcalHistoDefinitions.h"
 
 #include <typeinfo>
