@@ -17,7 +17,6 @@
 #include "Framework/AnalysisTask.h"
 #include "PWGEM/PhotonMeson/DataModel/gammaTables.h"
 
-
 #ifndef PWGEM_PHOTONMESON_UTILS_GAMMASELECTIONCUTS_H_
 #define PWGEM_PHOTONMESON_UTILS_GAMMASELECTIONCUTS_H_
 
