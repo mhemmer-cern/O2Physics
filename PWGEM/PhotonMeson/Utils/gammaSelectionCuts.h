@@ -91,7 +91,7 @@ uint64_t doMinECutEMC(int iCut, uint64_t cutbit, aod::SkimEMCCluster const& clus
 {
   uint64_t cut_return = 0;
   if (cutbit & ((uint64_t)1 << (uint64_t)iCut)) {        // check if current cut should be applied
-    if (cluster.energy() > emccuts::EMC_minE.at(iCut)) { // check cut itself
+    if (cluster.e() > emccuts::EMC_minE.at(iCut)) { // check cut itself
       cut_return |= (1 << iCut);                         // set bit of current cut to 1 for passing the cut
     } else {
       registry.fill(HIST("hCaloCuts_EMC"), 3, iCut);
@@ -124,7 +124,7 @@ uint64_t doTrackMatchingEMC(int iCut, uint64_t cutbit, aod::SkimEMCCluster const
       dPhi = track.trackphi() - cluster.phi();
       if ((fabs(dEta) <= emccuts::EMC_TM_Eta.at(iCut).at(0) + pow(track.trackpt() + emccuts::EMC_TM_Eta.at(iCut).at(1), emccuts::EMC_TM_Eta.at(iCut).at(2))) &&
           (fabs(dPhi) <= emccuts::EMC_TM_Phi.at(iCut).at(0) + pow(track.trackpt() + emccuts::EMC_TM_Phi.at(iCut).at(1), emccuts::EMC_TM_Phi.at(iCut).at(2))) &&
-          cluster.energy() / track.trackp() < emccuts::EMC_Eoverp.at(iCut)) { // check cut itself
+          cluster.e() / track.trackp() < emccuts::EMC_Eoverp.at(iCut)) { // check cut itself
         hasMatchedTrack_EMC = true;                                           // set bit of current cut to 1 for passing the cut
       }
     }
@@ -143,7 +143,7 @@ uint64_t doPhotonCutsEMC(uint64_t cutbit, aod::SkimEMCCluster const& cluster, ao
   auto tracksMatchedEMC = tracks.sliceBy(perEMCClusterMT, cluster.globalIndex());
   for (int iCut = 0; iCut < 64; iCut++) {           // loop over max number of cut settings
     if (cutbit & ((uint64_t)1 << (uint64_t)iCut)) { // check each cut setting if it is selected
-      registry.fill(HIST("hClusterEIn"), cluster.energy(), iCut);
+      registry.fill(HIST("hClusterEIn"), cluster.e(), iCut);
       cut_return = doTimeCutEMC(iCut, cutbit, cluster, registry);
       // use cut_return instead of cutbit from here on to only check cut settings that we want to look at
       // where the cluster did not fail in the previous cut(s)
@@ -154,7 +154,7 @@ uint64_t doPhotonCutsEMC(uint64_t cutbit, aod::SkimEMCCluster const& cluster, ao
 
       registry.fill(HIST("hCaloCuts_EMC"), 0, iCut);
       if (cut_return & ((uint64_t)1 << (uint64_t)iCut)) {
-        registry.fill(HIST("hClusterEOut"), cluster.energy(), iCut);
+        registry.fill(HIST("hClusterEOut"), cluster.e(), iCut);
         registry.fill(HIST("hCaloCuts_EMC"), 6, iCut);
       }
     }
