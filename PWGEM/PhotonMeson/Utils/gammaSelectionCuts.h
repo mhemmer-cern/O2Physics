@@ -91,7 +91,7 @@ uint64_t doMinECutEMC(int iCut, uint64_t cutbit, aod::SkimEMCCluster const& clus
 {
   uint64_t cut_return = 0;
   if (cutbit & ((uint64_t)1 << (uint64_t)iCut)) {        // check if current cut should be applied
-    if (cluster.e() > emccuts::EMC_minE.at(iCut)) { // check cut itself
+    if (cluster.e() > emccuts::EMC_minE.at(iCut)) {      // check cut itself
       cut_return |= (1 << iCut);                         // set bit of current cut to 1 for passing the cut
     } else {
       registry.fill(HIST("hCaloCuts_EMC"), 3, iCut);
@@ -124,7 +124,7 @@ uint64_t doTrackMatchingEMC(int iCut, uint64_t cutbit, aod::SkimEMCCluster const
       dPhi = track.trackphi() - cluster.phi();
       if ((fabs(dEta) <= emccuts::EMC_TM_Eta.at(iCut).at(0) + pow(track.trackpt() + emccuts::EMC_TM_Eta.at(iCut).at(1), emccuts::EMC_TM_Eta.at(iCut).at(2))) &&
           (fabs(dPhi) <= emccuts::EMC_TM_Phi.at(iCut).at(0) + pow(track.trackpt() + emccuts::EMC_TM_Phi.at(iCut).at(1), emccuts::EMC_TM_Phi.at(iCut).at(2))) &&
-          cluster.e() / track.trackp() < emccuts::EMC_Eoverp.at(iCut)) { // check cut itself
+          cluster.e() / track.trackp() < emccuts::EMC_Eoverp.at(iCut)) {      // check cut itself
         hasMatchedTrack_EMC = true;                                           // set bit of current cut to 1 for passing the cut
       }
     }
