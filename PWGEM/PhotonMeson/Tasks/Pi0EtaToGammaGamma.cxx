@@ -489,8 +489,6 @@ struct Pi0EtaToGammaGamma {
     // ROOT::Math::XYZVector photon1_3D(photon1.Px(), photon1.Py(), photon1.Pz());
     // ROOT::Math::XYZVector photon2_3D(photon2.Px(), photon2.Py(), photon2.Pz());
 
-
-
     // float openingAngleTest = std::acos(photon1_3D.Dot(test) / (std::sqrt(photon1_3D.Mag2()) * std::sqrt(test.Mag2())));
     // LOG(info) << "openingAngleTest before rotation = " << openingAngleTest;
     photon1 = rotationMatrix * photon1;
