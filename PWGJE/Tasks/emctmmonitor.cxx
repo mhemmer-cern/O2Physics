@@ -105,8 +105,8 @@ struct TrackMatchingMonitor {
     const o2Axis bcAxis{3501, -0.5, 3500.5};
     const o2Axis energyAxis{makeEnergyBinningAliPhysics(), "E_{clus} (GeV)"};
     const o2Axis amplitudeAxisLarge{1000, 0., 100., "amplitudeLarge", "Amplitude (GeV)"};
-    const o2Axis dEtaAxis{100, -1.f* minDEta, minDEta, "d#it{#eta}"};
-    const o2Axis dPhiAxis{100, -1.f* minDPhi, minDPhi, "d#it{#varphi} (rad)"};
+    const o2Axis dEtaAxis{100, -1.f * minDEta, minDEta, "d#it{#eta}"};
+    const o2Axis dPhiAxis{100, -1.f * minDPhi, minDPhi, "d#it{#varphi} (rad)"};
     const o2Axis dRAxis{150, 0.0, 0.015, "d#it{R}"};
     const o2Axis eoverpAxis{500, 0, 10, "#it{E}_{cluster}/#it{p}_{track}"};
     const o2Axis nSigmaAxis{130, -10., +3., "N#sigma"};
@@ -229,11 +229,11 @@ struct TrackMatchingMonitor {
     mHistManager.fill(HIST("eventVertexZSelected"), theCollision.posZ());
 
     for (const auto& alltrack : alltracks) {
-      if(alltrack.isGlobalTrack()){ // NSigma of all global tracks without matching
+      if (alltrack.isGlobalTrack()) { // NSigma of all global tracks without matching
         mHistManager.fill(HIST("TrackTM_NSigma"), alltrack.tpcNSigmaEl());
-        if(alltrack.sign() == 1){ // NSigma of all global positive tracks without matching
+        if (alltrack.sign() == 1) { // NSigma of all global positive tracks without matching
           mHistManager.fill(HIST("TrackTM_NSigma_p"), alltrack.tpcNSigmaEl());
-        } else if(alltrack.sign() == -1){ // NSigma of all global negative tracks without matching
+        } else if (alltrack.sign() == -1) { // NSigma of all global negative tracks without matching
           mHistManager.fill(HIST("TrackTM_NSigma_e"), alltrack.tpcNSigmaEl());
         }
       }
