@@ -530,6 +530,35 @@ DECLARE_SOA_TABLE(SkimPHOSCuts, "AOD", "SKIMPHOSCUTS",                          
                   o2::soa::Index<>, gammareco::SkimmedPHOSId, gammareco::PHOSCutBit); //!
 DECLARE_SOA_TABLE(SkimEMCCuts, "AOD", "SKIMEMCCUTS",                                  //! table of link between skimmed EMCal photon candidates and their cuts
                   o2::soa::Index<>, gammareco::SkimmedEMCId, gammareco::EMCCutBit);   //!
+
+namespace v0otf
+{
+  DECLARE_SOA_INDEX_COLUMN(Collision, collision);                         //! Collision index
+  DECLARE_SOA_INDEX_COLUMN_FULL(PosTrack, posTrack, int, Tracks, "_Pos"); //! Positive track
+  DECLARE_SOA_INDEX_COLUMN_FULL(NegTrack, negTrack, int, Tracks, "_Neg"); //! Negative track
+  DECLARE_SOA_COLUMN(Px, px, float);                                                      //! Momentum in x in GeV/c
+  DECLARE_SOA_COLUMN(Py, py, float);                                                      //! Momentum in y in GeV/c
+  DECLARE_SOA_COLUMN(Pz, pz, float);                                                      //! Momentum in z in GeV/c
+  DECLARE_SOA_COLUMN(E, e, float);                                                        //! Energy
+  DECLARE_SOA_COLUMN(Qt, qt, float);                                                      //! Qt for Armenteros
+  DECLARE_SOA_COLUMN(Alpha, alpha, float);                                                //! alpha for Armenteros
+  DECLARE_SOA_COLUMN(Cx, cx, float);                                                      //! X conversion point in cm
+  DECLARE_SOA_COLUMN(Cy, cy, float);                                                      //! Y conversion point in cm
+  DECLARE_SOA_COLUMN(Cz, cz, float);                                                      //! Z conversion point in cm
+  DECLARE_SOA_COLUMN(Chi2NDF, chi2NDF, float);                                            //! chi2 per ndf 
+  DECLARE_SOA_COLUMN(PsiPair, psiPair, float);                                            //! psi pair
+  DECLARE_SOA_COLUMN(DCAr, dcaR, float);                                                  //! custom bitmap for selection (standard or photon)
+  DECLARE_SOA_COLUMN(DCAz, dcaZ, float);                                                  //! 0: garbage, 1: both tracks TPC only, 2: 1 track TPC only, 3: both tracks more than 1 ITS cluster
+  DECLARE_SOA_COLUMN(Mass, mass, float);                                                  //! Is it tagged as decay pion (only for gammas)
+}
+DECLARE_SOA_TABLE(V0Otfs, "AOD", "V0OTF", //! table of Run2 PCM gamma candidates
+                  o2::soa::Index<>, v0otf::CollisionId, v0otf::PosTrackId, v0otf::NegTrackId,
+                  v0otf::Px, v0otf::Py, v0otf::Pz, v0otf::E,
+                  v0otf::Qt, v0otf::Alpha,
+                  v0otf::Cx, v0otf::Cy, v0otf::Cz,
+                  v0otf::Chi2NDF, v0otf::PsiPair,
+                  v0otf::DCAr, v0otf::DCAz, v0otf::Mass
+                  );
 } // namespace o2::aod
 
 #endif // PWGEM_PHOTONMESON_DATAMODEL_GAMMATABLES_H_
