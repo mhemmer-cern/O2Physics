@@ -483,7 +483,7 @@ struct EMfTaskPi0Flow {
           registry.fill(HIST("hTanThetaPhi"), vMeson.M(), getAngleDegree(atan(dTheta / dPhi)));
           registry.fill(HIST("hAlphaPt"), (v1.E() - v2.E()) / (v1.E() + v2.E()), vMeson.Pt());
         }
-        if( minTanThetadPhi > std::fabs(getAngleDegree(atan(dTheta / dPhi) ) ){
+        if (minTanThetadPhi > std::fabs(getAngleDegree(atan(dTheta / dPhi) )  ) ){
           continue;
         }
         runFlowAnalysis(collision, vMeson);

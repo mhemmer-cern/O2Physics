@@ -14,6 +14,9 @@
 // This code produces reduced events for photon analyses.
 //    Please write to: daiki.sekihata@cern.ch
 
+#include <string>
+#include <unordered_map>
+
 #include "Framework/runDataProcessing.h"
 #include "Framework/AnalysisTask.h"
 #include "Framework/AnalysisDataModel.h"
