@@ -46,8 +46,6 @@ const EMCALClusterDefinition kV3MostSplitSmallTimeDiff(ClusterAlgorithm_t::kV3, 
 const EMCALClusterDefinition kV3MostSplitSmallerTimeDiff(ClusterAlgorithm_t::kV3, 44, 1, "kV3MostSplitSmallerTimeDiff", 0.5, 0.1, -10000, 10000, 100, true, 0., false);
 const EMCALClusterDefinition kV3MostSplitSmallestTimeDiff(ClusterAlgorithm_t::kV3, 45, 1, "kV3MostSplitSmallestTimeDiff", 0.5, 0.1, -10000, 10000, 50, true, 0., false);
 
-
-
 /// \brief function returns EMCALClusterDefinition for the given name
 /// \param name name of the cluster definition
 /// \return EMCALClusterDefinition for the given name
