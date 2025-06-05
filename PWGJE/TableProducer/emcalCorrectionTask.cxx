@@ -18,54 +18,57 @@
 /// \author Raymond Ehlers (raymond.ehlers@cern.ch) ORNL, Florian Jonas (florian.jonas@cern.ch)
 ///
 
-#include <gsl/span>
-#include <fairlogger/Logger.h>
-#include <cstdint>
-#include <cstddef>
-#include <memory>
-#include <sstream>
-#include <unordered_map>
-#include <cmath>
-#include <string>
-#include <tuple>
-#include <utility>
-#include <vector>
-#include <random>
-
-#include "CCDB/BasicCCDBManager.h"
-#include "Framework/runDataProcessing.h"
-#include "Framework/AnalysisDataModel.h"
-#include "Framework/AnalysisTask.h"
-#include "Framework/AnalysisHelpers.h"
-#include "Framework/ASoA.h"
-#include "Framework/Configurable.h"
-#include "Framework/Expressions.h"
-#include "Framework/HistogramSpec.h"
-#include "Framework/HistogramRegistry.h"
-#include "Framework/InitContext.h"
-#include "Framework/WorkflowSpec.h"
-
-#include "DetectorsBase/GeometryManager.h"
-
+#include "PWGJE/Core/JetUtilities.h"
+#include "PWGJE/Core/emcalCrossTalkEmulation.h"
 #include "PWGJE/DataModel/EMCALClusterDefinition.h"
 #include "PWGJE/DataModel/EMCALClusters.h"
 #include "PWGJE/DataModel/EMCALMatchedCollisions.h"
 
 #include "Common/DataModel/EventSelection.h"
 #include "Common/DataModel/TrackSelectionTables.h"
-#include "DataFormatsEMCAL/ClusterLabel.h"
-#include "DataFormatsEMCAL/Cell.h"
-#include "DataFormatsEMCAL/CellLabel.h"
-#include "DataFormatsEMCAL/Constants.h"
-#include "DataFormatsEMCAL/AnalysisCluster.h"
-#include "EMCALBase/Geometry.h"
-#include "EMCALBase/ClusterFactory.h"
-#include "EMCALBase/NonlinearityHandler.h"
-#include "EMCALReconstruction/Clusterizer.h"
-#include "PWGJE/Core/JetUtilities.h"
-#include "GPUROOTCartesianFwd.h"
-#include "TVector2.h"
-#include "TH1.h"
+
+#include <CCDB/BasicCCDBManager.h>
+#include <DataFormatsEMCAL/AnalysisCluster.h>
+#include <DataFormatsEMCAL/Cell.h>
+#include <DataFormatsEMCAL/CellLabel.h>
+#include <DataFormatsEMCAL/ClusterLabel.h>
+#include <DataFormatsEMCAL/Constants.h>
+#include <DetectorsBase/GeometryManager.h>
+#include <EMCALBase/ClusterFactory.h>
+#include <EMCALBase/Geometry.h>
+#include <EMCALBase/NonlinearityHandler.h>
+#include <EMCALReconstruction/Clusterizer.h>
+#include <Framework/ASoA.h>
+#include <Framework/AnalysisDataModel.h>
+#include <Framework/AnalysisHelpers.h>
+#include <Framework/AnalysisTask.h>
+#include <Framework/Configurable.h>
+#include <Framework/Expressions.h>
+#include <Framework/HistogramRegistry.h>
+#include <Framework/HistogramSpec.h>
+#include <Framework/InitContext.h>
+#include <Framework/WorkflowSpec.h>
+#include <Framework/runDataProcessing.h>
+
+#include <TH1.h>
+#include <TVector2.h>
+
+#include <fairlogger/Logger.h>
+
+#include <GPUROOTCartesianFwd.h>
+
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <gsl/span>
+#include <memory>
+#include <random>
+#include <sstream>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 using namespace o2;
 using namespace o2::framework;
@@ -120,6 +123,9 @@ struct EmcalCorrectionTask {
 
   // CDB service (for geometry)
   Service<o2::ccdb::BasicCCDBManager> mCcdbManager;
+
+  // For EMCal cross talk
+  emccrosstalk::EMCCrossTalk emcCrossTalk;
 
   // Clusterizer and related
   // Apparently streaming these objects really doesn't work, and causes problems for setting up the workflow.
@@ -213,12 +219,12 @@ struct EmcalCorrectionTask {
 
     // Define the cell energy binning
     std::vector<double> cellEnergyBins;
-    for (int i = 0; i < 51; i++)
-      cellEnergyBins.emplace_back(0.1 * (i - 0) + 0.0); // from 0 to 5 GeV/c, every 0.1 GeV
-    for (int i = 51; i < 76; i++)
+    for (int i = 0; i < 51; i++)                         // o2-linter: disable=magic-number (just numbers for binning)
+      cellEnergyBins.emplace_back(0.1 * (i - 0) + 0.0);  // from 0 to 5 GeV/c, every 0.1 GeV
+    for (int i = 51; i < 76; i++)                        // o2-linter: disable=magic-number (just numbers for binning)
       cellEnergyBins.emplace_back(0.2 * (i - 51) + 5.2); // from 5.2 to 10.0 GeV, every 0.2 GeV
-    for (int i = 76; i < 166; i++)
-      cellEnergyBins.emplace_back(1. * (i - 76) + 11.); // from 11.0 to 100. GeV, every 1 GeV
+    for (int i = 76; i < 166; i++)                       // o2-linter: disable=magic-number (just numbers for binning)
+      cellEnergyBins.emplace_back(1. * (i - 76) + 11.);  // from 11.0 to 100. GeV, every 1 GeV
 
     // Setup QA hists.
     // NOTE: This is not comprehensive.
@@ -281,6 +287,10 @@ struct EmcalCorrectionTask {
       mHistManager.add("hClusterFCrossE", "hClusterFCrossE", O2HistType::kTH2D, {energyAxis, fCrossAxis});
       mHistManager.add("hClusterFCrossSigmaLongE", "hClusterFCrossSigmaLongE", O2HistType::kTH3F, {energyAxis, fCrossAxis, sigmaLongAxis});
       mHistManager.add("hClusterFCrossSigmaShortE", "hClusterFCrossSigmaShortE", O2HistType::kTH3F, {energyAxis, fCrossAxis, sigmaShortAxis});
+    }
+
+    if (isMC.value) {
+      emcCrossTalk.initObjects(mHistManager);
     }
 
     // For some runs, LG cells require an extra time shift of 2 * 8.8ns due to problems in the time calibration
@@ -469,15 +479,23 @@ struct EmcalCorrectionTask {
           mHistManager.fill(HIST("hMCParticleEnergy"), cellparticle.e());
         }
         auto amplitude = cell.amplitude();
-        if (static_cast<bool>(hasShaperCorrection) && emcal::intToChannelType(cell.cellType()) == emcal::ChannelType_t::LOW_GAIN) { // Apply shaper correction to LG cells
-          amplitude = o2::emcal::NonlinearityHandler::evaluateShaperCorrectionCellEnergy(amplitude);
-        }
         cellsBC.emplace_back(cell.cellNumber(),
                              amplitude,
                              cell.time() + getCellTimeShift(cell.cellNumber(), amplitude, o2::emcal::intToChannelType(cell.cellType()), runNumber),
                              o2::emcal::intToChannelType(cell.cellType()));
         cellIndicesBC.emplace_back(cell.globalIndex());
         cellLabels.emplace_back(cell.mcParticleIds(), cell.amplitudeA());
+      }
+      emcCrossTalk.setCells(&cellsBC, &cellLabels);
+      bool isOkCrossTalk = emcCrossTalk.run();
+      if (!isOkCrossTalk) {
+        LOG(info) << "Cross talk emulation failed!";
+      }
+      // shaper correction has to come AFTER cross talk
+      for (auto& cell : cellsBC) { // o2-linter: disable=const-ref-in-for-loop (we are changing a value here)
+        if (cell.getLowGain()) {
+          cell.setAmplitude(o2::emcal::NonlinearityHandler::evaluateShaperCorrectionCellEnergy(cell.getAmplitude()));
+        }
       }
       LOG(detail) << "Number of cells for BC (CF): " << cellsBC.size();
       nCellsProcessed += cellsBC.size();
@@ -757,7 +775,13 @@ struct EmcalCorrectionTask {
       if (indexMapPair && trackGlobalIndex) {
         for (unsigned int iTrack = 0; iTrack < std::get<0>(*indexMapPair)[iCluster].size(); iTrack++) {
           if (std::get<0>(*indexMapPair)[iCluster][iTrack] >= 0) {
-            LOG(debug) << "Found track " << (*trackGlobalIndex)[std::get<0>(*indexMapPair)[iCluster][iTrack]] << " in cluster " << cluster.getID();
+            if (iCluster >= std::get<0>(*indexMapPair).size()) {
+              LOG(info) << "iCluster out of range: " << iCluster;
+            }
+            if (iTrack >= std::get<0>(*indexMapPair)[iCluster].size()) {
+              LOG(info) << "iTrack out of range: " << iTrack;
+            }
+            // LOG(debug) << "Found track " << (*trackGlobalIndex)[std::get<0>(*indexMapPair)[iCluster][iTrack]] << " in cluster " << cluster.getID();
             matchedTracks(clusters.lastIndex(), (*trackGlobalIndex)[std::get<0>(*indexMapPair)[iCluster][iTrack]]);
           }
         }
