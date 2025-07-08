@@ -18,15 +18,16 @@
 
 #include "EMCALClusterDefinition.h"
 
+#include "Common/Core/RecoDecay.h"
+
+#include "MathUtils/Cartesian.h"
+#include "MathUtils/Utils.h"
 #include <Framework/ASoA.h>
 #include <Framework/AnalysisDataModel.h> // IWYU pragma: keep
 
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include "MathUtils/Utils.h"
-#include "MathUtils/Cartesian.h"
-#include "Common/Core/RecoDecay.h"
 
 namespace o2::aod
 {
