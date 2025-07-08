@@ -56,7 +56,7 @@ struct EmcalTrackSorter {
 
   // Filter for the tracks
   const float trackNotOnEMCal = -900;
-  Filter trackFilter = (aod::track::pt >= trackMinPt) && ((requireGlobalTrackInFilter()) || (aod::track::isGlobalTrackSDD == (uint8_t)true)) && (aod::track::trackEtaEmcal > trackNotOnEMCal) && (aod::track::trackPhiEmcal > trackNotOnEMCal) && (nabs(aod::track::dcaXY) < trackDCAxy) && (nabs(aod::track::dcaZ) < trackDCAz) && (aod::track::collisionId >= 0);
+  Filter trackFilter = (aod::track::pt >= trackMinPt) && ((requireGlobalTrackInFilter()) || (aod::track::isGlobalTrackSDD == (uint8_t) true)) && (aod::track::trackEtaEmcal > trackNotOnEMCal) && (aod::track::trackPhiEmcal > trackNotOnEMCal) && (nabs(aod::track::dcaXY) < trackDCAxy) && (nabs(aod::track::dcaZ) < trackDCAz) && (aod::track::collisionId >= 0);
   Filter collisionFilter = aod::evsel::foundBCId != -1;
 
   // QA
