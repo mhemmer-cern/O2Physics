@@ -20,8 +20,8 @@
 #include "Common/Core/trackUtilities.h"
 
 #include <CommonConstants/MathConstants.h>
-#include <ReconstructionDataFormats/HelixHelper.h>
 #include <DetectorsBase/Propagator.h>
+#include <ReconstructionDataFormats/HelixHelper.h>
 #include <ReconstructionDataFormats/TrackParametrizationWithError.h>
 
 #include <TVector2.h>
