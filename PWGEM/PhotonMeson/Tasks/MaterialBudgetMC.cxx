@@ -14,6 +14,8 @@
 // This code loops over v0 photons for studying material budget.
 //    Please write to: daiki.sekihata@cern.ch
 
+#include "EMPhotonEventCut.h"
+
 #include "PWGEM/Dilepton/Utils/MCUtilities.h"
 #include "PWGEM/PhotonMeson/Core/CutsLibrary.h"
 #include "PWGEM/PhotonMeson/Core/HistogramsLibrary.h"
@@ -23,24 +25,27 @@
 #include "PWGEM/PhotonMeson/Utils/MCUtilities.h"
 #include "PWGEM/PhotonMeson/Utils/PairUtilities.h"
 
-#include "Common/Core/RecoDecay.h"
 #include "Common/DataModel/Centrality.h"
 #include "Common/DataModel/EventSelection.h"
-#include "Common/DataModel/TrackSelectionTables.h"
 
-#include "Framework/ASoAHelpers.h"
 #include "Framework/AnalysisDataModel.h"
 #include "Framework/AnalysisTask.h"
 #include "Framework/runDataProcessing.h"
-#include "ReconstructionDataFormats/Track.h"
+#include <Framework/AnalysisHelpers.h>
+#include <Framework/Configurable.h>
+#include <Framework/InitContext.h>
 
-#include "Math/Vector4D.h"
 #include "TString.h"
+#include <Math/Vector4Dfwd.h>
+#include <THashList.h>
+#include <TMath.h>
 
+#include <cstdint>
+#include <cstdlib>
 #include <cstring>
-#include <iterator>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace o2;
@@ -256,7 +261,7 @@ struct MaterialBudgetMC {
       for (auto& cut : cuts) {
         for (auto& photon : photons_coll) {
 
-          if (!cut.template IsSelected<TLegs>(photon)) {
+          if (!cut.template IsSelected<decltype(photon), TLegs>(photon)) {
             continue;
           }
 
@@ -385,7 +390,7 @@ struct MaterialBudgetMC {
   }
 
   Partition<MyCollisions> grouped_collisions = cfgCentMin < o2::aod::cent::centFT0M && o2::aod::cent::centFT0M < cfgCentMax; // this goes to same event.
-  Filter collisionFilter_common = nabs(o2::aod::collision::posZ) < 10.f && o2::aod::collision::numContrib > (uint16_t)0 && o2::aod::evsel::sel8 == true;
+  Filter collisionFilter_common = nabs(o2::aod::collision::posZ) < 10.f && o2::aod::collision::numContrib > static_cast<uint16_t>(0) && o2::aod::evsel::sel8 == true;
   Filter collisionFilter_centrality = (cfgCentMin < o2::aod::cent::centFT0M && o2::aod::cent::centFT0M < cfgCentMax) || (cfgCentMin < o2::aod::cent::centFT0A && o2::aod::cent::centFT0A < cfgCentMax) || (cfgCentMin < o2::aod::cent::centFT0C && o2::aod::cent::centFT0C < cfgCentMax);
   using MyFilteredCollisions = soa::Filtered<MyCollisions>; // this goes to same event pairing.
 

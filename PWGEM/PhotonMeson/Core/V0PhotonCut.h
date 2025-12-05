@@ -9,25 +9,27 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-//
-// Class for v0 photon selection
-//
+/// \file V0PhotonCut.h
+/// \brief Header of class for V0 photon selection.
+/// \author D. Sekihata, daiki.sekihata@cern.ch
 
 #ifndef PWGEM_PHOTONMESON_CORE_V0PHOTONCUT_H_
 #define PWGEM_PHOTONMESON_CORE_V0PHOTONCUT_H_
 
-#include "Rtypes.h"
-
 #include "PWGEM/PhotonMeson/Utils/TrackSelection.h"
 
-#include "TMath.h"
-#include "TNamed.h"
+#include <TMath.h>
+#include <TNamed.h>
+
+#include <Rtypes.h>
 
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <functional>
 #include <set>
-#include <string>
 #include <utility>
-#include <vector>
+
 using namespace o2::pwgem::photonmeson;
 
 class V0PhotonCut : public TNamed
@@ -74,7 +76,7 @@ class V0PhotonCut : public TNamed
     kNCuts
   };
 
-  template <class TLeg, typename TV0>
+  template <typename TV0, typename TLeg>
   bool IsSelected(TV0 const& v0) const
   {
     if (!IsSelectedV0(v0, V0PhotonCuts::kV0PtRange)) {
