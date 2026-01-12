@@ -227,7 +227,6 @@ struct CalibTaskEmc {
 
   using BinningType = ColumnBinningPolicy<aod::collision::PosZ, aod::cent::CentFT0C>;
   BinningType binningOnPositions{{mixingConfig.cfgVtxBins, mixingConfig.cfgCentBins}, true};
-  Pair<Colls, EMCalPhotons, PCMPhotons, BinningType> pairPCMEMC{binningOnPositions, mixingConfig.cfgMixingDepth, -1, &cache}; // indicates that mixingConfig.cfgMixingDepth events should be mixed and under/overflow (-1) to be ignored
 
   HistogramRegistry registry{"registry", {}, OutputObjHandlingPolicy::AnalysisObject, false, false};
 
@@ -417,7 +416,7 @@ struct CalibTaskEmc {
 
   /// Get the centrality
   /// \param collision is the collision with the centrality information
-  template <typename TCollision>
+  template <o2::soa::is_iterator TCollision>
   float getCentrality(TCollision const& collision)
   {
     float cent = -999.;
@@ -484,7 +483,7 @@ struct CalibTaskEmc {
     return masked;
   }
 
-  template <typename TCollision>
+  template <o2::soa::is_iterator TCollision>
   void initCCDB(TCollision const& collision)
   {
     // Load EMCal geometry
@@ -519,7 +518,7 @@ struct CalibTaskEmc {
   }
 
   /// \brief Calculate background using rotation background method for calib
-  template <typename TPhotons, typename TCollision>
+  template <o2::soa::is_table TPhotons, o2::soa::is_iterator TCollision>
   void rotationBackgroundCalib(const ROOT::Math::PtEtaPhiMVector& meson, ROOT::Math::PtEtaPhiMVector photon1, ROOT::Math::PtEtaPhiMVector photon2, TPhotons const& photons_coll, unsigned int ig1, unsigned int ig2, TCollision const& collision)
   {
     // if less than 3 clusters are present skip event since we need at least 3 clusters
@@ -608,7 +607,7 @@ struct CalibTaskEmc {
   /// \param ig1 index of photon1
   /// \param ig2 index of photon2
   /// \param cent current collisions centrality
-  template <typename TPhotonEMC, typename TPhotonPCM>
+  template <o2::soa::is_table TPhotonEMC, o2::soa::is_table TPhotonPCM>
   void rotationBackgroundCalibEMCPCM(const ROOT::Math::PtEtaPhiMVector& meson, ROOT::Math::PtEtaPhiMVector photon1, ROOT::Math::PtEtaPhiMVector photon2, TPhotonEMC const& photonsEMC, TPhotonPCM const& photonsPCM, unsigned int ig1, unsigned int ig2, float cent)
   {
     // we need at least 2 clusters or 2 pcm photons for rotation
@@ -913,13 +912,15 @@ struct CalibTaskEmc {
   PROCESS_SWITCH(CalibTaskEmc, processEMCalPCMCalib, "Process EMCal calibration using PCM-EMC same event", true);
 
   // EMCal calibration mixed event
-  void processEMCalCalibMixed(Colls const&, EMCalPhotons const& clusters, PCMPhotons const&, MinMTracks const& matchedPrims, MinMSTracks const& matchedSeconds)
+  void processEMCalCalibMixed(Colls const& collisions, EMCalPhotons const& clusters, PCMPhotons const&, MinMTracks const& matchedPrims, MinMSTracks const& matchedSeconds)
   {
     float energyCorrectionFactor = 1.f;
     EMBitFlags emcFlags(clusters.size());
     fEMCCut.AreSelectedRunning(emcFlags, clusters, matchedPrims, matchedSeconds);
 
-    SameKindPair<Colls, EMCalPhotons, BinningType> pair{binningOnPositions, mixingConfig.cfgMixingDepth, -1, &cache}; // indicates that 5 events should be mixed and under/overflow (-1) to be ignored
+    auto associatedTables = std::make_tuple(clusters);
+
+    SameKindPair<Colls, EMCalPhotons, BinningType> pair{binningOnPositions, mixingConfig.cfgMixingDepth, -1, collisions, associatedTables, &cache}; // indicates that 5 events should be mixed and under/overflow (-1) to be ignored
 
     for (const auto& [c1, clusters1, c2, clusters2] : pair) {
       if (!(fEMEventCut.IsSelected(c1)) || !(fEMEventCut.IsSelected(c2))) {
@@ -994,8 +995,12 @@ struct CalibTaskEmc {
   PROCESS_SWITCH(CalibTaskEmc, processEMCalCalibMixed, "Process EMCal calibration mixed event", false);
 
   // EMCal calibration
-  void processEMCalPCMCalibMixed(Colls const&, EMCalPhotons const& clusters, PCMPhotons const&, aod::V0Legs const&, MinMTracks const& matchedPrims, MinMSTracks const& matchedSeconds)
+  void processEMCalPCMCalibMixed(Colls const& collisions, EMCalPhotons const& clusters, PCMPhotons const& pcmPhotons, aod::V0Legs const&, MinMTracks const& matchedPrims, MinMSTracks const& matchedSeconds)
   {
+    auto associatedTables = std::make_tuple(clusters, pcmPhotons);
+
+    Pair<Colls, EMCalPhotons, PCMPhotons, BinningType> pairPCMEMC{binningOnPositions, mixingConfig.cfgMixingDepth, -1, collisions, associatedTables, &cache}; // indicates that mixingConfig.cfgMixingDepth events should be mixed and under/overflow (-1) to be ignored
+
     float energyCorrectionFactor = 1.f;
     EMBitFlags emcFlags(clusters.size());
     fEMCCut.AreSelectedRunning(emcFlags, clusters, matchedPrims, matchedSeconds);

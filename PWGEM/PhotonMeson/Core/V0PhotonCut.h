@@ -193,7 +193,7 @@ class V0PhotonCut : public TNamed
     kNCuts
   };
 
-  template <o2::soa::is_iterator TV0, typename TLeg>
+  template <o2::soa::is_iterator TV0, o2::soa::is_table TLeg>
   bool IsSelected(TV0 const& v0) const
   {
     if (!IsSelectedV0(v0, V0PhotonCuts::kV0PtRange)) {
@@ -344,7 +344,7 @@ class V0PhotonCut : public TNamed
     return true;
   }
 
-  template <typename T>
+  template <o2::soa::is_iterator T>
   bool CheckITSCuts(T const& track) const
   {
     if (!IsSelectedTrack(track, V0PhotonCuts::kITSNCls)) {
@@ -359,7 +359,7 @@ class V0PhotonCut : public TNamed
     return true;
   }
 
-  template <typename T>
+  template <o2::soa::is_iterator T>
   bool CheckTPCCuts(T const& track) const
   {
     if (!IsSelectedTrack(track, V0PhotonCuts::kTPCNCls)) {
@@ -476,7 +476,7 @@ class V0PhotonCut : public TNamed
   }
 
   // Temporary function to check if track passes a given selection criteria. To be replaced by framework filters.
-  template <typename T>
+  template <o2::soa::is_iterator T>
   bool IsSelectedTrack(T const& track, const V0PhotonCuts& cut) const
   {
     switch (cut) {
