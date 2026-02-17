@@ -144,7 +144,7 @@ static const std::vector<std::string> labelsCent = {
   "Cent bin 10"};
 
 // column labels
-static const std::vector<std::string> labelsCutScore = {"score primary photons", "score background"};
+static const std::vector<std::string> labelsCutScore = {"score background", "score primary photons"};
 } // namespace em_cuts_ml
 
 } // namespace o2::analysis
@@ -578,25 +578,18 @@ class V0PhotonCut : public TNamed
         return false;
       }
       mIsSelectedMl = false;
-      V0PhotonCandidate v0photoncandidate(v0, pos, ele, mCentFT0A, mCentFT0C, mCentFT0M, mD_Bz);
-      mlInputFeatures = mEmMlResponse->getInputFeatures(v0photoncandidate, pos, ele);
+      mV0PhotonForMl.setPhoton(v0, pos, ele, mCent, mD_Bz, mCentralityTypeMl);
+      mMlInputFeatures = mEmMlResponse->getInputFeatures(mV0PhotonForMl, pos, ele);
       if (mUse2DBinning) {
-        if (mCentralityTypeMl == 2) {
-          mIsSelectedMl = mEmMlResponse->isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCentFT0C(), mOutputML);
-        } else if (mCentralityTypeMl == 1) {
-          mIsSelectedMl = mEmMlResponse->isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCentFT0A(), mOutputML);
-        } else if (mCentralityTypeMl == 0) {
-          mIsSelectedMl = mEmMlResponse->isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCentFT0M(), mOutputML);
-        } else {
-          LOG(fatal) << "Unsupported centTypePCMMl: " << mCentralityTypeMl << " , please choose from 2(=CentFT0C), 1(=CentFT0A), 0(=CentFT0M).";
-        }
+        mIsSelectedMl = mEmMlResponse->isSelectedMl(mMlInputFeatures, mV0PhotonForMl.getPt(), mV0PhotonForMl.getCent(), mOutputML);
       } else {
-        mIsSelectedMl = mEmMlResponse->isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), mOutputML);
+        mIsSelectedMl = mEmMlResponse->isSelectedMl(mMlInputFeatures, mV0PhotonForMl.getPt(), mOutputML);
       }
       if (!mIsSelectedMl) {
         return false;
       }
-      mlInputFeatures.clear();
+      mOutputML.clear();
+      mMlInputFeatures.clear();
     }
     if (doQA) {
       fillAfterPhotonHistogram(v0, pos, ele, fRegistry);
@@ -845,7 +838,7 @@ class V0PhotonCut : public TNamed
 
   void initV0MlModels(o2::ccdb::CcdbApi& ccdbApi)
   {
-    if (!mEmMlResponse) {
+    if (mEmMlResponse == nullptr) {
       mEmMlResponse = new o2::analysis::EmMlResponsePCM<float>();
     }
     if (mUse2DBinning) {
@@ -901,16 +894,7 @@ class V0PhotonCut : public TNamed
 
   const std::vector<float>& getBDTValue() const
   {
-    if (mApplyMlCuts) {
-      if (!mEmMlResponse) {
-        LOG(error) << "EM ML Response is not initialized!";
-        return mErrorVector;
-      }
-      return mOutputML;
-    } else {
-      LOG(error) << "ML cuts are not applied!";
-      return mErrorVector;
-    }
+    return mOutputML;
   }
 
   template <o2::soa::is_iterator TMCPhoton>
@@ -980,15 +964,13 @@ class V0PhotonCut : public TNamed
   void SetApplyMlCuts(bool flag = false);
   void SetUse2DBinning(bool flag = true);
   void SetLoadMlModelsFromCCDB(bool flag = true);
-  void SetIsSelectedMl(bool flag = false);
   void SetNClassesMl(int nClasses);
   void SetMlTimestampCCDB(int timestamp);
-  void SetCentralityTypeMl(int centType);
-  void SetCentrality(float centFT0A, float centFT0C, float centFT0M);
+  void SetCentralityTypeMl(CentType centType);
+  void SetCentrality(float cent);
   void SetD_Bz(float d_bz);
   void SetCcdbUrl(const std::string& url = "http://alice-ccdb.cern.ch");
   void SetCutDirMl(const std::vector<int>& cutDirMl);
-  void SetMLOutput(const std::vector<float>& mlOutput);
   void SetMlModelPathsCCDB(const std::vector<std::string>& modelPaths);
   void SetMlOnnxFileNames(const std::vector<std::string>& onnxFileNamesVec);
   void SetLabelsBinsMl(const std::vector<std::string>& labelsBins);
@@ -1026,27 +1008,25 @@ class V0PhotonCut : public TNamed
   bool mUse2DBinning{true};
   bool mLoadMlModelsFromCCDB{true};
   int mTimestampCCDB{-1};
-  int mCentralityTypeMl{2};
   int mNClassesMl{static_cast<int>(o2::analysis::em_cuts_ml::NCutScores)};
-  float mCentFT0A{0.f};
-  float mCentFT0C{0.f};
-  float mCentFT0M{0.f};
+  float mCent{0.f};
   float mD_Bz{0.f};
   std::string mCcdbUrl{"http://alice-ccdb.cern.ch"};
   std::vector<int> mCutDirMl{std::vector<int>{o2::analysis::em_cuts_ml::vecCutDir}};
-  std::vector<float> mErrorVector{std::vector<float>{-1.f}}; // for error handling in ML response
   std::vector<std::string> mModelPathsCCDB{std::vector<std::string>{"path_ccdb/BDT_PCM/"}};
   std::vector<std::string> mOnnxFileNames{std::vector<std::string>{"ModelHandler_onnx_PCM.onnx"}};
   std::vector<std::string> mNamesInputFeatures{std::vector<std::string>{"feature1", "feature2"}};
   std::vector<std::string> mLabelsBinsMl{std::vector<std::string>{"bin 0", "bin 1"}};
-  std::vector<std::string> mLabelsCutScoresMl{std::vector<std::string>{"score primary photons", "score background"}};
+  std::vector<std::string> mLabelsCutScoresMl{std::vector<std::string>{o2::analysis::em_cuts_ml::labelsCutScore}};
   std::vector<double> mBinsPtMl{std::vector<double>{o2::analysis::em_cuts_ml::vecBinsPt}};
   std::vector<double> mBinsCentMl{std::vector<double>{o2::analysis::em_cuts_ml::vecBinsCent}};
   std::vector<double> mCutsMlFlat{std::vector<double>{0.5}};
   o2::analysis::EmMlResponsePCM<float>* mEmMlResponse{nullptr};
   mutable bool mIsSelectedMl{false};
-  mutable std::vector<float> mOutputML{std::vector<float>{-1.f, -1.f}};       // vector to store ML output scores for each class, initialized with dummy values
-  mutable std::vector<float> mlInputFeatures{std::vector<float>{-1.f, -1.f}}; // vector to store input features for ML model, initialized with dummy values
+  mutable std::vector<float> mOutputML{};        // vector to store ML output scores for each class, initialized with dummy values
+  mutable std::vector<float> mMlInputFeatures{}; // vector to store input features for ML model, initialized with dummy values
+  CentType mCentralityTypeMl{CentType::CentFT0C};
+  mutable V0PhotonCandidate mV0PhotonForMl;
 
   // pid cuts
   float mMinTPCNsigmaEl{-5}, mMaxTPCNsigmaEl{+5};

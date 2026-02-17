@@ -38,6 +38,7 @@
 
 #include <TH1.h>
 #include <TH2.h>
+#include <TPDGCode.h>
 
 #include <cmath>
 #include <cstdlib>
@@ -136,7 +137,6 @@ struct PCMQCMC {
     Configurable<bool> cfg_load_ml_models_from_ccdb{"cfg_load_ml_models_from_ccdb", true, "flag to load ML models from CCDB"};
     Configurable<int> cfg_timestamp_ccdb{"cfg_timestamp_ccdb", -1, "timestamp for CCDB"};
     Configurable<int> cfg_nclasses_ml{"cfg_nclasses_ml", static_cast<int>(o2::analysis::em_cuts_ml::NCutScores), "number of classes for ML"};
-    Configurable<int> cfg_cent_type_ml{"cfg_cent_type_ml", 2, "centrality type for 2D ML application:  FT0M:0, FT0A:1, FT0C:2"};
     Configurable<std::vector<int>> cfg_cut_dir_ml{"cfg_cut_dir_ml", std::vector<int>{o2::analysis::em_cuts_ml::vecCutDir}, "cut direction for ML"};
     Configurable<std::vector<std::string>> cfg_input_feature_names{"cfg_input_feature_names", std::vector<std::string>{"feature1", "feature2"}, "input feature names for ML models"};
     Configurable<std::vector<std::string>> cfg_model_paths_ccdb{"cfg_model_paths_ccdb", std::vector<std::string>{"path_ccdb/BDT_PCM/"}, "CCDB paths for ML models"};
@@ -409,7 +409,9 @@ struct PCMQCMC {
     fV0PhotonCut.SetNClassesMl(pcmcuts.cfg_nclasses_ml);
     fV0PhotonCut.SetMlTimestampCCDB(pcmcuts.cfg_timestamp_ccdb);
     fV0PhotonCut.SetCcdbUrl(ccdburl);
-    fV0PhotonCut.SetCentralityTypeMl(pcmcuts.cfg_cent_type_ml);
+    CentType mCentralityTypeMlEnum;
+    mCentralityTypeMlEnum = static_cast<CentType>(cfgCentEstimator.value);
+    fV0PhotonCut.SetCentralityTypeMl(mCentralityTypeMlEnum);
     fV0PhotonCut.SetCutDirMl(pcmcuts.cfg_cut_dir_ml);
     fV0PhotonCut.SetMlModelPathsCCDB(pcmcuts.cfg_model_paths_ccdb);
     fV0PhotonCut.SetMlOnnxFileNames(pcmcuts.cfg_onnx_file_names);
@@ -508,14 +510,14 @@ struct PCMQCMC {
     // BDT response histogram can be filled here when apply BDT is true
     if (pcmcuts.cfg_apply_ml_cuts) {
       const std::vector<float>& bdtValue = fV0PhotonCut.getBDTValue();
-      if (pcmcuts.cfg_nclasses_ml == 2) {
+      if (pcmcuts.cfg_nclasses_ml == 2 && bdtValue.size() == 2) {
         fRegistry.fill(HIST("V0/") + HIST(mcphoton_types[mctype]) + HIST("hBDTBackgroundScoreVsPt"), v0.pt(), bdtValue[0]);
         fRegistry.fill(HIST("V0/") + HIST(mcphoton_types[mctype]) + HIST("hBDTSignalScoreVsPt"), v0.pt(), bdtValue[1]);
-      } else if (pcmcuts.cfg_nclasses_ml == 3) {
+      } else if (pcmcuts.cfg_nclasses_ml == 3 && bdtValue.size() == 2) {
         fRegistry.fill(HIST("V0/") + HIST(mcphoton_types[mctype]) + HIST("hBDTBackgroundScoreVsPt"), v0.pt(), bdtValue[0]);
         fRegistry.fill(HIST("V0/") + HIST(mcphoton_types[mctype]) + HIST("hBDTPrimaryPhotonScoreVsPt"), v0.pt(), bdtValue[1]);
         fRegistry.fill(HIST("V0/") + HIST(mcphoton_types[mctype]) + HIST("hBDTSecondaryPhotonScoreVsPt"), v0.pt(), bdtValue[2]);
-      } else {
+      } else if (bdtValue.size() == 1) {
         fRegistry.fill(HIST("V0/") + HIST(mcphoton_types[mctype]) + HIST("hBDTCutVsPt"), v0.pt(), bdtValue[0]);
       }
     }
@@ -563,7 +565,7 @@ struct PCMQCMC {
   Preslice<MyV0Photons> perCollision = aod::v0photonkf::emeventId;
   void processQCMC(FilteredMyCollisions const& collisions, MyV0Photons const& v0photons, MyMCV0Legs const&, aod::EMMCParticles const& mcparticles, aod::EMMCEvents const&)
   {
-    for (auto& collision : collisions) {
+    for (const auto& collision : collisions) {
       initCCDB(collision);
       const float centralities[3] = {collision.centFT0M(), collision.centFT0A(), collision.centFT0C()};
       if (centralities[cfgCentEstimator] < cfgCentMin || cfgCentMax < centralities[cfgCentEstimator]) {
@@ -578,10 +580,10 @@ struct PCMQCMC {
       fRegistry.fill(HIST("Event/before/hCollisionCounter"), 10.0); // accepted
       fRegistry.fill(HIST("Event/after/hCollisionCounter"), 10.0);  // accepted
 
-      fV0PhotonCut.SetCentrality(centralities[1], centralities[0], centralities[2]); // set centrality for BDT response
+      fV0PhotonCut.SetCentrality(centralities[cfgCentEstimator]); // set centrality for BDT response
       auto V0Photons_coll = v0photons.sliceBy(perCollision, collision.globalIndex());
       int ng_primary = 0, ng_wd = 0, ng_hs = 0, nee_pi0 = 0, nee_eta = 0;
-      for (auto& v0 : V0Photons_coll) {
+      for (const auto& v0 : V0Photons_coll) {
         auto pos = v0.posTrack_as<MyMCV0Legs>();
         auto ele = v0.negTrack_as<MyMCV0Legs>();
         auto posmc = pos.template emmcparticle_as<aod::EMMCParticles>();
@@ -595,7 +597,7 @@ struct PCMQCMC {
 
         fRegistry.fill(HIST("V0/candidate/hPt"), v0.pt());
         fRegistry.fill(HIST("V0/candidate/hEtaPhi"), v0.phi(), v0.eta());
-        for (auto& leg : {pos, ele}) {
+        for (const auto& leg : {pos, ele}) {
           fRegistry.fill(HIST("V0Leg/candidate/hPt"), leg.pt());
           fRegistry.fill(HIST("V0Leg/candidate/hEtaPhi"), leg.phi(), leg.eta());
         }
@@ -615,19 +617,19 @@ struct PCMQCMC {
 
           if (mcphoton.isPhysicalPrimary() || mcphoton.producedByGenerator()) {
             fillV0Info<0>(v0, mcphoton, elemc);
-            for (auto& leg : {pos, ele}) {
+            for (const auto& leg : {pos, ele}) {
               fillV0LegInfo<0>(leg);
             }
             ng_primary++;
           } else if (IsFromWD(mcphoton.template emmcevent_as<aod::EMMCEvents>(), mcphoton, mcparticles) > 0) {
             fillV0Info<1>(v0, mcphoton, elemc);
-            for (auto& leg : {pos, ele}) {
+            for (const auto& leg : {pos, ele}) {
               fillV0LegInfo<1>(leg);
             }
             ng_wd++;
           } else {
             fillV0Info<2>(v0, mcphoton, elemc);
-            for (auto& leg : {pos, ele}) {
+            for (const auto& leg : {pos, ele}) {
               fillV0LegInfo<2>(leg);
             }
             ng_hs++;
@@ -640,7 +642,7 @@ struct PCMQCMC {
           }
           if (mcpi0.isPhysicalPrimary() || mcpi0.producedByGenerator()) {
             fillV0Info<3>(v0, mcpi0, elemc);
-            for (auto& leg : {pos, ele}) {
+            for (const auto& leg : {pos, ele}) {
               fillV0LegInfo<3>(leg);
             }
             nee_pi0++;
@@ -652,7 +654,7 @@ struct PCMQCMC {
           }
           if (mceta.isPhysicalPrimary() || mceta.producedByGenerator()) {
             fillV0Info<4>(v0, mceta, elemc);
-            for (auto& leg : {pos, ele}) {
+            for (const auto& leg : {pos, ele}) {
               fillV0LegInfo<4>(leg);
             }
             nee_eta++;
@@ -697,7 +699,7 @@ struct PCMQCMC {
     // loop over mc stack and fill histograms for pure MC truth signals
     // all MC tracks which belong to the MC event corresponding to the current reconstructed event
 
-    for (auto& collision : collisions) {
+    for (const auto& collision : collisions) {
       const float centralities[3] = {collision.centFT0M(), collision.centFT0A(), collision.centFT0C()};
       if (centralities[cfgCentEstimator] < cfgCentMin || cfgCentMax < centralities[cfgCentEstimator]) {
         continue;
@@ -713,12 +715,12 @@ struct PCMQCMC {
       // LOGF(info, "mccollision.globalIndex() = %d", mccollision.globalIndex());
 
       auto mctracks_coll = mcparticles.sliceBy(perMcCollision, mccollision.globalIndex());
-      for (auto& mctrack : mctracks_coll) {
+      for (const auto& mctrack : mctracks_coll) {
         if (std::fabs(mctrack.y()) > pcmcuts.cfg_max_eta_v0) {
           continue;
         }
 
-        if (std::abs(mctrack.pdgCode()) == 22 && (mctrack.isPhysicalPrimary() || mctrack.producedByGenerator())) {
+        if (std::abs(mctrack.pdgCode()) == PDG_t::kGamma && (mctrack.isPhysicalPrimary() || mctrack.producedByGenerator())) {
           auto daughter = mcparticles.iteratorAt(mctrack.daughtersIds()[0]); // choose ele or pos.
           float rxy_gen_e = std::sqrt(std::pow(daughter.vx(), 2) + std::pow(daughter.vy(), 2));
           float phi_cp = std::atan2(daughter.vy(), daughter.vx());

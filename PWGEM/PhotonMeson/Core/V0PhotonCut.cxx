@@ -285,11 +285,6 @@ void V0PhotonCut::SetLoadMlModelsFromCCDB(bool flag)
   LOG(info) << "V0 Photon Cut, set load ML models from CCDB: " << mLoadMlModelsFromCCDB;
 }
 
-void V0PhotonCut::SetIsSelectedMl(bool flag)
-{
-  mIsSelectedMl = flag;
-}
-
 void V0PhotonCut::SetBinsPtMl(const std::vector<double>& binsPt)
 {
   mBinsPtMl = binsPt;
@@ -311,20 +306,20 @@ void V0PhotonCut::SetCutsMl(const std::vector<double>& cuts)
 void V0PhotonCut::SetNClassesMl(int nClasses)
 {
   mNClassesMl = nClasses;
+  mOutputML.reserve(mNClassesMl);
   LOG(info) << "V0 Photon Cut, set number of classes ML: " << mNClassesMl;
 }
 
 void V0PhotonCut::SetNamesInputFeatures(const std::vector<std::string>& featureNames)
 {
   mNamesInputFeatures = featureNames;
+  mMlInputFeatures.reserve(mNamesInputFeatures.size());
   LOG(info) << "V0 Photon Cut, set ML input feature names with size:" << mNamesInputFeatures.size();
 }
 
-void V0PhotonCut::SetCentrality(float centFT0A, float centFT0C, float centFT0M)
+void V0PhotonCut::SetCentrality(float cent)
 {
-  mCentFT0A = centFT0A;
-  mCentFT0C = centFT0C;
-  mCentFT0M = centFT0M;
+  mCent = cent;
 }
 void V0PhotonCut::SetD_Bz(float d_bz)
 {
@@ -337,16 +332,10 @@ void V0PhotonCut::SetCutDirMl(const std::vector<int>& cutDirMl)
   LOG(info) << "V0 Photon Cut, set ML cut directions with size:" << mCutDirMl.size();
 }
 
-void V0PhotonCut::SetMLOutput(const std::vector<float>& mlOutput)
-{
-  mOutputML = mlOutput;
-  LOG(info) << "V0 Photon Cut, set ML output with size:" << mOutputML.size();
-}
-
-void V0PhotonCut::SetCentralityTypeMl(int centType)
+void V0PhotonCut::SetCentralityTypeMl(CentType centType)
 {
   mCentralityTypeMl = centType;
-  LOG(info) << "V0 Photon Cut, set centrality type ML: " << mCentralityTypeMl << " (0: CentFT0A, 1: CentFT0C, 2: CentFT0M)";
+  LOG(info) << "V0 Photon Cut, set centrality type ML: " << mCentralityTypeMl << " (0: CentFT0M, 1: CentFT0A, 2: CentFT0C)";
 }
 
 void V0PhotonCut::SetLabelsBinsMl(const std::vector<std::string>& labelsBins)

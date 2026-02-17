@@ -178,6 +178,7 @@ struct PhotonConversionBuilder {
 
   o2::analysis::EmMlResponsePCM<float> emMlResponse;
   std::vector<float> outputML;
+  V0PhotonCandidate v0photoncandidate;
   o2::ccdb::CcdbApi ccdbApi;
 
   int mRunNumber;
@@ -213,15 +214,7 @@ struct PhotonConversionBuilder {
       {"V0/hRxy_minX_ITSTPC_TPC", "min trackiu X vs. R_{xy};trackiu X (cm);min trackiu X - R_{xy} (cm)", {HistType::kTH2F, {{100, 0.0f, 100.f}, {100, -50.0, 50.0f}}}},
       {"V0/hRxy_minX_TPC_TPC", "min trackiu X vs. R_{xy};trackiu X (cm);min trackiu X - R_{xy} (cm)", {HistType::kTH2F, {{100, 0.0f, 100.f}, {100, -50.0, 50.0f}}}},
       {"V0/hPCA_diffX", "PCA vs. trackiu X - R_{xy};distance btween 2 legs (cm);min trackiu X - R_{xy} (cm)", {HistType::kTH2F, {{500, 0.0f, 5.f}, {100, -50.0, 50.0f}}}},
-      {"V0/hPhiV", "#phi_{V}; #phi_{V} (rad.)", {HistType::kTH1F, {{500, 0.0f, o2::constants::math::TwoPI}}}},
-      {"V0/hPhiV2", "#phi_{V}; #phi_{V} (rad.)", {HistType::kTH1F, {{500, 0.0f, o2::constants::math::TwoPI}}}},
-      {"V0/hPsiPair", "psi pair;#psi_{pair} (rad.)", {HistType::kTH1F, {{500, -o2::constants::math::PI, o2::constants::math::PI}}}},
-      {"V0/hPsiPair2", "psi pair;#psi_{pair} (rad.)", {HistType::kTH1F, {{500, -o2::constants::math::PI, o2::constants::math::PI}}}},
       {"V0/hPhiVPsiPair", "phiV vs. psi pair;#psi_{pair} (rad.);#phi_{V} (rad.)", {HistType::kTH2F, {{500, -o2::constants::math::PI, o2::constants::math::PI}, {500, 0.0f, o2::constants::math::TwoPI}}}},
-      {"V0/hPhiV_Rxy", "R_{xy} vs. phiV;#phi_{V} (rad.);  R_{xy} (cm)", {HistType::kTH2F, {{500, 0.0f, o2::constants::math::TwoPI}, {200, 0.0f, 100.f}}}},
-      {"V0/hPhiV_ConversionPointZ", "conversion point in Z vs. phiV;#phi_{V} (rad.);conversion point in Z (cm)", {HistType::kTH2F, {{500, 0.0f, o2::constants::math::TwoPI}, {400, -100.0f, 100.0f}}}},
-      {"V0/hPhiV_ConversionPointX", "conversion point in X vs. phiV;#phi_{V} (rad.);conversion point in X (cm)", {HistType::kTH2F, {{500, 0.0f, o2::constants::math::TwoPI}, {400, -100.0f, 100.0f}}}},
-      {"V0/hPhiV_ConversionPointY", "conversion point in Y vs. phiV;#phi_{V} (rad.);conversion point in Y (cm)", {HistType::kTH2F, {{500, 0.0f, o2::constants::math::TwoPI}, {400, -100.0f, 100.0f}}}},
       {"V0Leg/hPt", "pT of leg at SV;p_{T,e} (GeV/c)", {HistType::kTH1F, {{1000, 0.0f, 10.0f}}}},
       {"V0Leg/hEtaPhi", "#eta vs. #varphi of leg at SV;#varphi (rad.);#eta", {HistType::kTH2F, {{72, 0.0f, o2::constants::math::TwoPI}, {200, -1, +1}}}},
       {"V0Leg/hRelDeltaPt", "pT resolution;p_{T} (GeV/c);#Deltap_{T}/p_{T}", {HistType::kTH2F, {{1000, 0.f, 10.f}, {100, 0, 1}}}},
@@ -696,7 +689,10 @@ struct PhotonConversionBuilder {
     kfp_pos_DecayVtx.TransportToPoint(xyz); // Don't set Primary Vertex
     kfp_ele_DecayVtx.TransportToPoint(xyz); // Don't set Primary Vertex
 
-    V0PhotonCandidate v0photoncandidate(gammaKF_DecayVtx, kfp_pos_DecayVtx, kfp_ele_DecayVtx, collision, cospa_kf, d_bz);
+    float phiv = o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz);
+    float psipair = o2::aod::pwgem::dilepton::utils::pairutil::getPsiPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz());
+    CentType centType = static_cast<CentType>(centTypePCMMl.value);
+    v0photoncandidate.setPhotonCandidate(gammaKF_DecayVtx, kfp_pos_DecayVtx, kfp_ele_DecayVtx, collision, cospa_kf, psipair, phiv, centType);
 
     if (!ele.hasITS() && !pos.hasITS()) { // V0s with TPConly-TPConly
       if (max_r_itsmft_ss < rxy && rxy < maxX + margin_r_tpc) {
@@ -746,15 +742,7 @@ struct PhotonConversionBuilder {
       bool isSelectedML = false;
       std::vector<float> mlInputFeatures = emMlResponse.getInputFeatures(v0photoncandidate, pos, ele);
       if (use2DBinning) {
-        if (centTypePCMMl == 2) {
-          isSelectedML = emMlResponse.isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCentFT0C(), outputML);
-        } else if (centTypePCMMl == 1) {
-          isSelectedML = emMlResponse.isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCentFT0A(), outputML);
-        } else if (centTypePCMMl == 0) {
-          isSelectedML = emMlResponse.isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCentFT0M(), outputML);
-        } else {
-          LOG(fatal) << "Unsupported centTypePCMMl: " << centTypePCMMl << " , please choose from 2(=CentFT0C), 1(=CentFT0A), 0(=CentFT0M).";
-        }
+        isSelectedML = emMlResponse.isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCent(), outputML);
       } else {
         isSelectedML = emMlResponse.isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), outputML);
       }
@@ -800,15 +788,7 @@ struct PhotonConversionBuilder {
       registry.fill(HIST("V0/hPCA_Rxy"), rxy, v0photoncandidate.getPCA());
       registry.fill(HIST("V0/hDCAxyz"), v0photoncandidate.getDcaXYToPV(), v0photoncandidate.getDcaZToPV());
       registry.fill(HIST("V0/hPCA_diffX"), v0photoncandidate.getPCA(), std::min(pTrack.getX(), nTrack.getX()) - rxy); // trackiu.x() - rxy should be positive
-      registry.fill(HIST("V0/hPhiV"), v0photoncandidate.getPhiV());
-      registry.fill(HIST("V0/hPhiV2"), o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz));
-      registry.fill(HIST("V0/hPsiPair"), v0photoncandidate.getPsiPair());
-      registry.fill(HIST("V0/hPsiPair2"), o2::aod::pwgem::dilepton::utils::pairutil::getPsiPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz()));
-      registry.fill(HIST("V0/hPhiVPsiPair"), o2::aod::pwgem::dilepton::utils::pairutil::getPsiPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz()), o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz));
-      registry.fill(HIST("V0/hPhiV_Rxy"), o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz), rxy);
-      registry.fill(HIST("V0/hPhiV_ConversionPointZ"), o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz), gammaKF_DecayVtx.GetZ());
-      registry.fill(HIST("V0/hPhiV_ConversionPointX"), o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz), gammaKF_DecayVtx.GetX());
-      registry.fill(HIST("V0/hPhiV_ConversionPointY"), o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz), gammaKF_DecayVtx.GetY());
+      registry.fill(HIST("V0/hPhiVPsiPair"), v0photoncandidate.getPsiPair(), v0photoncandidate.getPhiV());
 
       float cospaXY_kf = cospaXY_KF(gammaKF_DecayVtx, KFPV);
       float cospaRZ_kf = cospaRZ_KF(gammaKF_DecayVtx, KFPV);

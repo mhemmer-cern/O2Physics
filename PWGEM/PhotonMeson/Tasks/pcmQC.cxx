@@ -119,7 +119,6 @@ struct PCMQC {
     Configurable<bool> cfg_load_ml_models_from_ccdb{"cfg_load_ml_models_from_ccdb", true, "flag to load ML models from CCDB"};
     Configurable<int> cfg_timestamp_ccdb{"cfg_timestamp_ccdb", -1, "timestamp for CCDB"};
     Configurable<int> cfg_nclasses_ml{"cfg_nclasses_ml", static_cast<int>(o2::analysis::em_cuts_ml::NCutScores), "number of classes for ML"};
-    Configurable<int> cfg_cent_type_ml{"cfg_cent_type_ml", 2, "centrality type for 2D ML application:  FT0M:0, FT0A:1, FT0C:2"};
     Configurable<std::vector<int>> cfg_cut_dir_ml{"cfg_cut_dir_ml", std::vector<int>{o2::analysis::em_cuts_ml::vecCutDir}, "cut direction for ML"};
     Configurable<std::vector<std::string>> cfg_input_feature_names{"cfg_input_feature_names", std::vector<std::string>{"feature1", "feature2"}, "input feature names for ML models"};
     Configurable<std::vector<std::string>> cfg_model_paths_ccdb{"cfg_model_paths_ccdb", std::vector<std::string>{"path_ccdb/BDT_PCM/"}, "CCDB paths for ML models"};
@@ -330,7 +329,9 @@ struct PCMQC {
     fV0PhotonCut.SetNClassesMl(pcmcuts.cfg_nclasses_ml);
     fV0PhotonCut.SetMlTimestampCCDB(pcmcuts.cfg_timestamp_ccdb);
     fV0PhotonCut.SetCcdbUrl(ccdburl);
-    fV0PhotonCut.SetCentralityTypeMl(pcmcuts.cfg_cent_type_ml);
+    CentType mCentralityTypeMlEnum;
+    mCentralityTypeMlEnum = static_cast<CentType>(cfgCentEstimator.value);
+    fV0PhotonCut.SetCentralityTypeMl(mCentralityTypeMlEnum);
     fV0PhotonCut.SetCutDirMl(pcmcuts.cfg_cut_dir_ml);
     fV0PhotonCut.SetMlModelPathsCCDB(pcmcuts.cfg_model_paths_ccdb);
     fV0PhotonCut.SetMlOnnxFileNames(pcmcuts.cfg_onnx_file_names);
@@ -416,14 +417,14 @@ struct PCMQC {
     // BDT response histogram can be filled here when apply BDT is true
     if (pcmcuts.cfg_apply_ml_cuts) {
       const std::vector<float>& bdtValue = fV0PhotonCut.getBDTValue();
-      if (pcmcuts.cfg_nclasses_ml == 2) {
+      if (pcmcuts.cfg_nclasses_ml == 2 && bdtValue.size() == 2) {
         fRegistry.fill(HIST("V0/hBDTBackgroundScoreVsPt"), v0.pt(), bdtValue[0]);
         fRegistry.fill(HIST("V0/hBDTSignalScoreVsPt"), v0.pt(), bdtValue[1]);
-      } else if (pcmcuts.cfg_nclasses_ml == 3) {
+      } else if (pcmcuts.cfg_nclasses_ml == 3 && bdtValue.size() == 3) {
         fRegistry.fill(HIST("V0/hBDTBackgroundScoreVsPt"), v0.pt(), bdtValue[0]);
         fRegistry.fill(HIST("V0/hBDTPrimaryPhotonScoreVsPt"), v0.pt(), bdtValue[1]);
         fRegistry.fill(HIST("V0/hBDTSecondaryPhotonScoreVsPt"), v0.pt(), bdtValue[2]);
-      } else {
+      } else if (bdtValue.size() == 1) {
         fRegistry.fill(HIST("V0/hBDTCutVsPt"), v0.pt(), bdtValue[0]);
       }
     }
@@ -479,7 +480,7 @@ struct PCMQC {
       fRegistry.fill(HIST("Event/before/hCollisionCounter"), 10.0); // accepted
       fRegistry.fill(HIST("Event/after/hCollisionCounter"), 10.0);  // accepted
 
-      fV0PhotonCut.SetCentrality(collision.centFT0A(), collision.centFT0C(), collision.centFT0M());
+      fV0PhotonCut.SetCentrality(centralities[cfgCentEstimator]);
       int nv0 = 0;
       auto v0photons_coll = v0photons.sliceBy(perCollision, collision.globalIndex());
       for (const auto& v0 : v0photons_coll) {
