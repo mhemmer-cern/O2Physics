@@ -577,19 +577,18 @@ class V0PhotonCut : public TNamed
         LOG(error) << "EM ML Response is not initialized!";
         return false;
       }
-      bool mIsSelectedMl = false;
-      std::vector<float> mOutputML;
+      mIsSelectedMl = false;
       V0PhotonCandidate v0photoncandidate(v0, pos, ele, mCentFT0A, mCentFT0C, mCentFT0M, mD_Bz);
-      std::vector<float> mlInputFeatures = mEmMlResponse->getInputFeatures(v0photoncandidate, pos, ele);
+      mlInputFeatures = mEmMlResponse->getInputFeatures(v0photoncandidate, pos, ele);
       if (mUse2DBinning) {
-        if (mCentralityTypeMl == "CentFT0C") {
+        if (mCentralityTypeMl == 2) {
           mIsSelectedMl = mEmMlResponse->isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCentFT0C(), mOutputML);
-        } else if (mCentralityTypeMl == "CentFT0A") {
+        } else if (mCentralityTypeMl == 1) {
           mIsSelectedMl = mEmMlResponse->isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCentFT0A(), mOutputML);
-        } else if (mCentralityTypeMl == "CentFT0M") {
+        } else if (mCentralityTypeMl == 0) {
           mIsSelectedMl = mEmMlResponse->isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCentFT0M(), mOutputML);
         } else {
-          LOG(fatal) << "Unsupported centTypePCMMl: " << mCentralityTypeMl << " , please choose from CentFT0C, CentFT0A, CentFT0M.";
+          LOG(fatal) << "Unsupported centTypePCMMl: " << mCentralityTypeMl << " , please choose from 2(=CentFT0C), 1(=CentFT0A), 0(=CentFT0M).";
         }
       } else {
         mIsSelectedMl = mEmMlResponse->isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), mOutputML);
@@ -597,6 +596,7 @@ class V0PhotonCut : public TNamed
       if (!mIsSelectedMl) {
         return false;
       }
+      mlInputFeatures.clear();
     }
     if (doQA) {
       fillAfterPhotonHistogram(v0, pos, ele, fRegistry);
@@ -899,6 +899,20 @@ class V0PhotonCut : public TNamed
     mEmMlResponse->init();
   }
 
+  const std::vector<float>& getBDTValue() const
+  {
+    if (mApplyMlCuts) {
+      if (!mEmMlResponse) {
+        LOG(error) << "EM ML Response is not initialized!";
+        return mErrorVector;
+      }
+      return mOutputML;
+    } else {
+      LOG(error) << "ML cuts are not applied!";
+      return mErrorVector;
+    }
+  }
+
   template <o2::soa::is_iterator TMCPhoton>
   bool IsConversionPointInAcceptance(TMCPhoton const& mcphoton, float convRadius) const
   {
@@ -966,13 +980,15 @@ class V0PhotonCut : public TNamed
   void SetApplyMlCuts(bool flag = false);
   void SetUse2DBinning(bool flag = true);
   void SetLoadMlModelsFromCCDB(bool flag = true);
+  void SetIsSelectedMl(bool flag = false);
   void SetNClassesMl(int nClasses);
   void SetMlTimestampCCDB(int timestamp);
+  void SetCentralityTypeMl(int centType);
   void SetCentrality(float centFT0A, float centFT0C, float centFT0M);
   void SetD_Bz(float d_bz);
   void SetCcdbUrl(const std::string& url = "http://alice-ccdb.cern.ch");
-  void SetCentralityTypeMl(const std::string& centType);
   void SetCutDirMl(const std::vector<int>& cutDirMl);
+  void SetMLOutput(const std::vector<float>& mlOutput);
   void SetMlModelPathsCCDB(const std::vector<std::string>& modelPaths);
   void SetMlOnnxFileNames(const std::vector<std::string>& onnxFileNamesVec);
   void SetLabelsBinsMl(const std::vector<std::string>& labelsBins);
@@ -1010,14 +1026,15 @@ class V0PhotonCut : public TNamed
   bool mUse2DBinning{true};
   bool mLoadMlModelsFromCCDB{true};
   int mTimestampCCDB{-1};
+  int mCentralityTypeMl{2};
   int mNClassesMl{static_cast<int>(o2::analysis::em_cuts_ml::NCutScores)};
   float mCentFT0A{0.f};
   float mCentFT0C{0.f};
   float mCentFT0M{0.f};
   float mD_Bz{0.f};
   std::string mCcdbUrl{"http://alice-ccdb.cern.ch"};
-  std::string mCentralityTypeMl{"CentFT0C"};
   std::vector<int> mCutDirMl{std::vector<int>{o2::analysis::em_cuts_ml::vecCutDir}};
+  std::vector<float> mErrorVector{std::vector<float>{-1.f}}; // for error handling in ML response
   std::vector<std::string> mModelPathsCCDB{std::vector<std::string>{"path_ccdb/BDT_PCM/"}};
   std::vector<std::string> mOnnxFileNames{std::vector<std::string>{"ModelHandler_onnx_PCM.onnx"}};
   std::vector<std::string> mNamesInputFeatures{std::vector<std::string>{"feature1", "feature2"}};
@@ -1027,6 +1044,9 @@ class V0PhotonCut : public TNamed
   std::vector<double> mBinsCentMl{std::vector<double>{o2::analysis::em_cuts_ml::vecBinsCent}};
   std::vector<double> mCutsMlFlat{std::vector<double>{0.5}};
   o2::analysis::EmMlResponsePCM<float>* mEmMlResponse{nullptr};
+  mutable bool mIsSelectedMl{false};
+  mutable std::vector<float> mOutputML{std::vector<float>{-1.f, -1.f}};       // vector to store ML output scores for each class, initialized with dummy values
+  mutable std::vector<float> mlInputFeatures{std::vector<float>{-1.f, -1.f}}; // vector to store input features for ML model, initialized with dummy values
 
   // pid cuts
   float mMinTPCNsigmaEl{-5}, mMaxTPCNsigmaEl{+5};

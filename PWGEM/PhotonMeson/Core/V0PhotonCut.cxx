@@ -285,6 +285,11 @@ void V0PhotonCut::SetLoadMlModelsFromCCDB(bool flag)
   LOG(info) << "V0 Photon Cut, set load ML models from CCDB: " << mLoadMlModelsFromCCDB;
 }
 
+void V0PhotonCut::SetIsSelectedMl(bool flag)
+{
+  mIsSelectedMl = flag;
+}
+
 void V0PhotonCut::SetBinsPtMl(const std::vector<double>& binsPt)
 {
   mBinsPtMl = binsPt;
@@ -332,10 +337,16 @@ void V0PhotonCut::SetCutDirMl(const std::vector<int>& cutDirMl)
   LOG(info) << "V0 Photon Cut, set ML cut directions with size:" << mCutDirMl.size();
 }
 
-void V0PhotonCut::SetCentralityTypeMl(const std::string& centType)
+void V0PhotonCut::SetMLOutput(const std::vector<float>& mlOutput)
+{
+  mOutputML = mlOutput;
+  LOG(info) << "V0 Photon Cut, set ML output with size:" << mOutputML.size();
+}
+
+void V0PhotonCut::SetCentralityTypeMl(int centType)
 {
   mCentralityTypeMl = centType;
-  LOG(info) << "V0 Photon Cut, set centrality type ML: " << mCentralityTypeMl;
+  LOG(info) << "V0 Photon Cut, set centrality type ML: " << mCentralityTypeMl << " (0: CentFT0A, 1: CentFT0C, 2: CentFT0M)";
 }
 
 void V0PhotonCut::SetLabelsBinsMl(const std::vector<std::string>& labelsBins)

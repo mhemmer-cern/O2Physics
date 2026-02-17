@@ -165,7 +165,7 @@ struct PhotonConversionBuilder {
   Configurable<bool> loadModelsFromCCDB{"loadModelsFromCCDB", false, "Flag to enable or disable the loading of models from CCDB"};
   Configurable<int> nClassesPCMMl{"nClassesPCMMl", static_cast<int>(o2::analysis::em_cuts_ml::NCutScores), "Number of classes in ML model"};
   Configurable<int> timestampCCDB{"timestampCCDB", -1, "timestamp of the ONNX file for ML model used to query in CCDB"};
-  Configurable<std::string> centTypePCMMl{"centTypePCMMl", "CentFT0C", "Centrality type for 2D ML application: CentFT0C, CentFT0M, or CentFT0A"};
+  Configurable<int> centTypePCMMl{"centTypePCMMl", 2, "Centrality type for 2D ML application: FT0M:0, FT0A:1, FT0C:2"};
   Configurable<std::vector<int>> cutDirPCMMl{"cutDirPCMMl", std::vector<int>{o2::analysis::em_cuts_ml::vecCutDir}, "Whether to reject score values greater or smaller than the threshold"};
   Configurable<std::vector<std::string>> namesInputFeatures{"namesInputFeatures", std::vector<std::string>{"feature1", "feature2"}, "Names of ML model input features"};
   Configurable<std::vector<std::string>> modelPathsCCDB{"modelPathsCCDB", std::vector<std::string>{"path_ccdb/BDT_PCM/"}, "Paths of models on CCDB"};
@@ -214,8 +214,14 @@ struct PhotonConversionBuilder {
       {"V0/hRxy_minX_TPC_TPC", "min trackiu X vs. R_{xy};trackiu X (cm);min trackiu X - R_{xy} (cm)", {HistType::kTH2F, {{100, 0.0f, 100.f}, {100, -50.0, 50.0f}}}},
       {"V0/hPCA_diffX", "PCA vs. trackiu X - R_{xy};distance btween 2 legs (cm);min trackiu X - R_{xy} (cm)", {HistType::kTH2F, {{500, 0.0f, 5.f}, {100, -50.0, 50.0f}}}},
       {"V0/hPhiV", "#phi_{V}; #phi_{V} (rad.)", {HistType::kTH1F, {{500, 0.0f, o2::constants::math::TwoPI}}}},
-      {"V0/hBDTvalueBeforeCutVsPt", "BDT response before cut vs pT; pT (GeV/c); BDT response", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}}},
-      {"V0/hBDTvalueAfterCutVsPt", "BDT response after cut vs pT; pT (GeV/c); BDT response", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}}},
+      {"V0/hPhiV2", "#phi_{V}; #phi_{V} (rad.)", {HistType::kTH1F, {{500, 0.0f, o2::constants::math::TwoPI}}}},
+      {"V0/hPsiPair", "psi pair;#psi_{pair} (rad.)", {HistType::kTH1F, {{500, -o2::constants::math::PI, o2::constants::math::PI}}}},
+      {"V0/hPsiPair2", "psi pair;#psi_{pair} (rad.)", {HistType::kTH1F, {{500, -o2::constants::math::PI, o2::constants::math::PI}}}},
+      {"V0/hPhiVPsiPair", "phiV vs. psi pair;#psi_{pair} (rad.);#phi_{V} (rad.)", {HistType::kTH2F, {{500, -o2::constants::math::PI, o2::constants::math::PI}, {500, 0.0f, o2::constants::math::TwoPI}}}},
+      {"V0/hPhiV_Rxy", "R_{xy} vs. phiV;#phi_{V} (rad.);  R_{xy} (cm)", {HistType::kTH2F, {{500, 0.0f, o2::constants::math::TwoPI}, {200, 0.0f, 100.f}}}},
+      {"V0/hPhiV_ConversionPointZ", "conversion point in Z vs. phiV;#phi_{V} (rad.);conversion point in Z (cm)", {HistType::kTH2F, {{500, 0.0f, o2::constants::math::TwoPI}, {400, -100.0f, 100.0f}}}},
+      {"V0/hPhiV_ConversionPointX", "conversion point in X vs. phiV;#phi_{V} (rad.);conversion point in X (cm)", {HistType::kTH2F, {{500, 0.0f, o2::constants::math::TwoPI}, {400, -100.0f, 100.0f}}}},
+      {"V0/hPhiV_ConversionPointY", "conversion point in Y vs. phiV;#phi_{V} (rad.);conversion point in Y (cm)", {HistType::kTH2F, {{500, 0.0f, o2::constants::math::TwoPI}, {400, -100.0f, 100.0f}}}},
       {"V0Leg/hPt", "pT of leg at SV;p_{T,e} (GeV/c)", {HistType::kTH1F, {{1000, 0.0f, 10.0f}}}},
       {"V0Leg/hEtaPhi", "#eta vs. #varphi of leg at SV;#varphi (rad.);#eta", {HistType::kTH2F, {{72, 0.0f, o2::constants::math::TwoPI}, {200, -1, +1}}}},
       {"V0Leg/hRelDeltaPt", "pT resolution;p_{T} (GeV/c);#Deltap_{T}/p_{T}", {HistType::kTH2F, {{1000, 0.f, 10.f}, {100, 0, 1}}}},
@@ -305,6 +311,22 @@ struct PhotonConversionBuilder {
       }
       emMlResponse.cacheInputFeaturesIndices(namesInputFeatures);
       emMlResponse.init();
+      if (nClassesPCMMl == 2) {
+        registry.add("V0/hBDTBackgroundScoreBeforeCutVsPt", "BDT background score before cut vs pT; pT (GeV/c); BDT background score", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}});
+        registry.add("V0/hBDTBackgroundScoreAfterCutVsPt", "BDT background score after cut vs pT; pT (GeV/c); BDT background score", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}});
+        registry.add("V0/hBDTSignalScoreBeforeCutVsPt", "BDT signal score before cut vs pT; pT (GeV/c); BDT signal score", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}});
+        registry.add("V0/hBDTSignalScoreAfterCutVsPt", "BDT signal score after cut vs pT; pT (GeV/c); BDT signal score", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}});
+      } else if (nClassesPCMMl == 3) {
+        registry.add("V0/hBDTBackgroundScoreBeforeCutVsPt", "BDT background score before cut vs pT; pT (GeV/c); BDT background score", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}});
+        registry.add("V0/hBDTBackgroundScoreAfterCutVsPt", "BDT background score after cut vs pT; pT (GeV/c); BDT background score", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}});
+        registry.add("V0/hBDTPrimaryPhotonScoreBeforeCutVsPt", "BDT primary photon score before cut vs pT; pT (GeV/c); BDT primary photon score", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}});
+        registry.add("V0/hBDTPrimaryPhotonScoreAfterCutVsPt", "BDT primary photon score after cut vs pT; pT (GeV/c); BDT primary photon score", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}});
+        registry.add("V0/hBDTSecondaryPhotonScoreBeforeCutVsPt", "BDT secondary photon score before cut vs pT; pT (GeV/c); BDT secondary photon score", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}});
+        registry.add("V0/hBDTSecondaryPhotonScoreAfterCutVsPt", "BDT secondary photon score after cut vs pT; pT (GeV/c); BDT secondary photon score", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}});
+      } else {
+        registry.add("V0/hBDTScoreBeforeCutVsPt", "BDT score before cut vs pT; pT (GeV/c); BDT score", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}});
+        registry.add("V0/hBDTScoreAfterCutVsPt", "BDT score after cut vs pT; pT (GeV/c); BDT score", {HistType::kTH2F, {{1000, 0.0f, 20.0f}, {1000, 0.0f, 1.0f}}});
+      }
     }
   }
 
@@ -724,26 +746,44 @@ struct PhotonConversionBuilder {
       bool isSelectedML = false;
       std::vector<float> mlInputFeatures = emMlResponse.getInputFeatures(v0photoncandidate, pos, ele);
       if (use2DBinning) {
-        if (std::string(centTypePCMMl) == "CentFT0C") {
+        if (centTypePCMMl == 2) {
           isSelectedML = emMlResponse.isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCentFT0C(), outputML);
-        } else if (std::string(centTypePCMMl) == "CentFT0A") {
+        } else if (centTypePCMMl == 1) {
           isSelectedML = emMlResponse.isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCentFT0A(), outputML);
-        } else if (std::string(centTypePCMMl) == "CentFT0M") {
+        } else if (centTypePCMMl == 0) {
           isSelectedML = emMlResponse.isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), v0photoncandidate.getCentFT0M(), outputML);
         } else {
-          LOG(fatal) << "Unsupported centTypePCMMl: " << centTypePCMMl << " , please choose from CentFT0C, CentFT0A, CentFT0M.";
+          LOG(fatal) << "Unsupported centTypePCMMl: " << centTypePCMMl << " , please choose from 2(=CentFT0C), 1(=CentFT0A), 0(=CentFT0M).";
         }
       } else {
         isSelectedML = emMlResponse.isSelectedMl(mlInputFeatures, v0photoncandidate.getPt(), outputML);
       }
       if (filltable) {
-        registry.fill(HIST("V0/hBDTvalueBeforeCutVsPt"), v0photoncandidate.getPt(), outputML[0]);
+        if (nClassesPCMMl == 2) {
+          registry.fill(HIST("V0/hBDTBackgroundScoreBeforeCutVsPt"), v0photoncandidate.getPt(), outputML[0]);
+          registry.fill(HIST("V0/hBDTSignalScoreBeforeCutVsPt"), v0photoncandidate.getPt(), outputML[1]);
+        } else if (nClassesPCMMl == 3) {
+          registry.fill(HIST("V0/hBDTPrimaryPhotonScoreBeforeCutVsPt"), v0photoncandidate.getPt(), outputML[0]);
+          registry.fill(HIST("V0/hBDTSecondaryPhotonScoreBeforeCutVsPt"), v0photoncandidate.getPt(), outputML[1]);
+          registry.fill(HIST("V0/hBDTBackgroundScoreBeforeCutVsPt"), v0photoncandidate.getPt(), outputML[2]);
+        } else {
+          registry.fill(HIST("V0/hBDTScoreBeforeCutVsPt"), v0photoncandidate.getPt(), outputML[0]);
+        }
       }
       if (!isSelectedML) {
         return;
       }
       if (filltable) {
-        registry.fill(HIST("V0/hBDTvalueAfterCutVsPt"), v0photoncandidate.getPt(), outputML[0]);
+        if (nClassesPCMMl == 2) {
+          registry.fill(HIST("V0/hBDTBackgroundScoreAfterCutVsPt"), v0photoncandidate.getPt(), outputML[0]);
+          registry.fill(HIST("V0/hBDTSignalScoreAfterCutVsPt"), v0photoncandidate.getPt(), outputML[1]);
+        } else if (nClassesPCMMl == 3) {
+          registry.fill(HIST("V0/hBDTPrimaryPhotonScoreAfterCutVsPt"), v0photoncandidate.getPt(), outputML[0]);
+          registry.fill(HIST("V0/hBDTSecondaryPhotonScoreAfterCutVsPt"), v0photoncandidate.getPt(), outputML[1]);
+          registry.fill(HIST("V0/hBDTBackgroundScoreAfterCutVsPt"), v0photoncandidate.getPt(), outputML[2]);
+        } else {
+          registry.fill(HIST("V0/hBDTScoreAfterCutVsPt"), v0photoncandidate.getPt(), outputML[0]);
+        }
       }
     }
 
@@ -761,6 +801,14 @@ struct PhotonConversionBuilder {
       registry.fill(HIST("V0/hDCAxyz"), v0photoncandidate.getDcaXYToPV(), v0photoncandidate.getDcaZToPV());
       registry.fill(HIST("V0/hPCA_diffX"), v0photoncandidate.getPCA(), std::min(pTrack.getX(), nTrack.getX()) - rxy); // trackiu.x() - rxy should be positive
       registry.fill(HIST("V0/hPhiV"), v0photoncandidate.getPhiV());
+      registry.fill(HIST("V0/hPhiV2"), o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz));
+      registry.fill(HIST("V0/hPsiPair"), v0photoncandidate.getPsiPair());
+      registry.fill(HIST("V0/hPsiPair2"), o2::aod::pwgem::dilepton::utils::pairutil::getPsiPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz()));
+      registry.fill(HIST("V0/hPhiVPsiPair"), o2::aod::pwgem::dilepton::utils::pairutil::getPsiPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz()), o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz));
+      registry.fill(HIST("V0/hPhiV_Rxy"), o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz), rxy);
+      registry.fill(HIST("V0/hPhiV_ConversionPointZ"), o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz), gammaKF_DecayVtx.GetZ());
+      registry.fill(HIST("V0/hPhiV_ConversionPointX"), o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz), gammaKF_DecayVtx.GetX());
+      registry.fill(HIST("V0/hPhiV_ConversionPointY"), o2::aod::pwgem::dilepton::utils::pairutil::getPhivPair(pos.px(), pos.py(), pos.pz(), ele.px(), ele.py(), ele.pz(), pos.sign(), ele.sign(), d_bz), gammaKF_DecayVtx.GetY());
 
       float cospaXY_kf = cospaXY_KF(gammaKF_DecayVtx, KFPV);
       float cospaRZ_kf = cospaRZ_KF(gammaKF_DecayVtx, KFPV);
