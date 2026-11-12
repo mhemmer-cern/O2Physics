@@ -15,6 +15,7 @@
 ///
 
 #include "PWGEM/PhotonMeson/Core/EMCPhotonCut.h"
+#include "PWGEM/PhotonMeson/Core/EMConfigModules.h"
 #include "PWGEM/PhotonMeson/Core/EMPhotonEventCut.h"
 #include "PWGEM/PhotonMeson/DataModel/EventTables.h"
 #include "PWGEM/PhotonMeson/DataModel/GammaTablesRedux.h"
@@ -48,6 +49,7 @@ using namespace o2::framework;
 using namespace o2::framework::expressions;
 using namespace o2::soa;
 using namespace o2::aod::pwgem::photon;
+using namespace o2::aod::pwgem::pm;
 
 using MyCollisions = soa::Join<aod::PMEvents, aod::EMEventsAlias, aod::EMEventsMult_000, aod::EMEventsCent_000, aod::EMEventsQvec_001, aod::EMEventsWeight>;
 using MyCollision = MyCollisions::iterator;
@@ -58,45 +60,13 @@ using EMCalPhoton = EMCalPhotons::iterator;
 struct EmcalQC {
 
   Configurable<bool> cfgDo2DQA{"cfgDo2DQA", true, "perform 2 dimensional cluster QA"};
+  Configurable<std::string> cfgConfigDeviceName{"cfgConfigDeviceName", "", "device name of em-config-holder (incl. suffix) to take eventcut_group and emccut_group from. Empty: use local values"};
 
   EMPhotonEventCut fEMEventCut;
-  struct : ConfigurableGroup {
-    std::string prefix = "eventcut_group";
-    Configurable<float> cfgZvtxMax{"cfgZvtxMax", 10.f, "max. Zvtx"};
-    Configurable<bool> cfgRequireSel8{"cfgRequireSel8", true, "require sel8 in event cut"};
-    Configurable<bool> cfgRequireFT0AND{"cfgRequireFT0AND", true, "require FT0AND in event cut"};
-    Configurable<bool> cfgRequireNoTFB{"cfgRequireNoTFB", false, "require No time frame border in event cut"};
-    Configurable<bool> cfgRequireNoITSROFB{"cfgRequireNoITSROFB", false, "require no ITS readout frame border in event cut"};
-    Configurable<bool> cfgRequireNoSameBunchPileup{"cfgRequireNoSameBunchPileup", false, "require no same bunch pileup in event cut"};
-    Configurable<bool> cfgRequireVertexITSTPC{"cfgRequireVertexITSTPC", false, "require Vertex ITSTPC in event cut"}; // ITS-TPC matched track contributes PV.
-    Configurable<bool> cfgRequireGoodZvtxFT0vsPV{"cfgRequireGoodZvtxFT0vsPV", false, "require good Zvtx between FT0 vs. PV in event cut"};
-    Configurable<bool> cfgRequireEMCReadoutInMB{"cfgRequireEMCReadoutInMB", false, "require the EMC to be read out in an MB collision (kTVXinEMC)"};
-    Configurable<bool> cfgRequireEMCHardwareTriggered{"cfgRequireEMCHardwareTriggered", false, "require the EMC to be hardware triggered (kEMC7 or kDMC7)"};
-    Configurable<int> cfgOccupancyMin{"cfgOccupancyMin", -1, "min. occupancy"};
-    Configurable<int> cfgOccupancyMax{"cfgOccupancyMax", 1000000000, "max. occupancy"};
-    Configurable<bool> onlyKeepWeightedEvents{"onlyKeepWeightedEvents", false, "flag to keep only weighted events (for JJ MCs) and remove all MB events (with weight = 1)"};
-  } eventcuts;
+  config::EventCutConfigurables eventcuts;
 
   EMCPhotonCut fEMCCut;
-  struct : ConfigurableGroup {
-    std::string prefix = "emccut_group";
-    Configurable<std::string> clusterDefinition{"clusterDefinition", "kV3Default", "Clusterizer to be selected, e.g. V3Default"};
-    Configurable<float> minOpenAngle{"minOpenAngle", 0.0202, "apply min opening angle"};
-    Configurable<float> minClusterTime{"minClusterTime", -20., "Minimum cluster time for EMCal time cut"};
-    Configurable<float> maxClusterTime{"maxClusterTime", +25., "Maximum cluster time for EMCal time cut"};
-    Configurable<float> minM02{"minM02", 0.1, "Minimum M02 for EMCal M02 cut"};
-    Configurable<float> maxM02{"maxM02", 0.7, "Maximum M02 for EMCal M02 cut"};
-    Configurable<float> minClusterE{"minClusterE", 0.7, "Minimum cluster energy for EMCal energy cut"};
-    Configurable<int> minNCell{"minNCell", 1, "Minimum number of cells per cluster for EMCal NCell cut"};
-    Configurable<std::vector<float>> cfgEMCTMEta{"cfgEMCTMEta", {0.01f, 4.07f, -2.5f}, "|eta| <= [0]+(pT+[1])^[2] for EMCal track matching"};
-    Configurable<std::vector<float>> cfgEMCTMPhi{"cfgEMCTMPhi", {0.015f, 3.65f, -2.f}, "|phi| <= [0]+(pT+[1])^[2] for EMCal track matching"};
-    Configurable<std::vector<float>> emcSecTMEta{"emcSecTMEta", {0.01f, 4.07f, -2.5f}, "|eta| <= [0]+(pT+[1])^[2] for EMCal track matching"};
-    Configurable<std::vector<float>> emcSecTMPhi{"emcSecTMPhi", {0.015f, 3.65f, -2.f}, "|phi| <= [0]+(pT+[1])^[2] for EMCal track matching"};
-    Configurable<float> tmEoverP{"tmEoverP", 1.75, "Minimum cluster energy over track momentum for EMCal track matching"};
-    Configurable<bool> useExoticCut{"useExoticCut", true, "FLag to use the EMCal exotic cluster cut"};
-    Configurable<bool> cfgEMCUseTM{"cfgEMCUseTM", false, "flag to use EMCal track matching cut or not"};
-    Configurable<bool> emcUseSecondaryTM{"emcUseSecondaryTM", false, "flag to use EMCal secondary track matching cut or not"};
-  } emccuts;
+  config::EMCCutConfigurables emccuts;
 
   struct : ConfigurableGroup {
     std::string prefix = "axis_group";
@@ -107,37 +77,12 @@ struct EmcalQC {
   void defineEMEventCut()
   {
     fEMEventCut = EMPhotonEventCut("fEMEventCut", "fEMEventCut");
-    fEMEventCut.SetRequireSel8(eventcuts.cfgRequireSel8);
-    fEMEventCut.SetRequireFT0AND(eventcuts.cfgRequireFT0AND);
-    fEMEventCut.SetZvtxRange(-eventcuts.cfgZvtxMax, +eventcuts.cfgZvtxMax);
-    fEMEventCut.SetRequireNoTFB(eventcuts.cfgRequireNoTFB);
-    fEMEventCut.SetRequireNoITSROFB(eventcuts.cfgRequireNoITSROFB);
-    fEMEventCut.SetRequireNoSameBunchPileup(eventcuts.cfgRequireNoSameBunchPileup);
-    fEMEventCut.SetRequireVertexITSTPC(eventcuts.cfgRequireVertexITSTPC);
-    fEMEventCut.SetRequireGoodZvtxFT0vsPV(eventcuts.cfgRequireGoodZvtxFT0vsPV);
-    fEMEventCut.SetRequireEMCReadoutInMB(eventcuts.cfgRequireEMCReadoutInMB);
-    fEMEventCut.SetRequireEMCHardwareTriggered(eventcuts.cfgRequireEMCHardwareTriggered);
-    fEMEventCut.SetTrackOccupancyRange(eventcuts.cfgOccupancyMin, eventcuts.cfgOccupancyMax);
+    config::configureEventCut(fEMEventCut, eventcuts);
   }
 
   void defineEMCCut()
   {
-    fEMCCut.SetClusterizer(emccuts.clusterDefinition);
-    fEMCCut.SetMinE(emccuts.minClusterE);
-    fEMCCut.SetMinNCell(emccuts.minNCell);
-    fEMCCut.SetM02Range(emccuts.minM02, emccuts.maxM02);
-    fEMCCut.SetTimeRange(emccuts.minClusterTime, emccuts.maxClusterTime);
-
-    fEMCCut.SetUseExoticCut(emccuts.useExoticCut);
-
-    fEMCCut.SetTrackMatchingEtaParams(emccuts.cfgEMCTMEta->at(0), emccuts.cfgEMCTMEta->at(1), emccuts.cfgEMCTMEta->at(2));
-    fEMCCut.SetTrackMatchingPhiParams(emccuts.cfgEMCTMPhi->at(0), emccuts.cfgEMCTMPhi->at(1), emccuts.cfgEMCTMPhi->at(2));
-    fEMCCut.SetMinEoverP(emccuts.tmEoverP);
-    fEMCCut.SetUseTM(emccuts.cfgEMCUseTM.value); // disables or enables TM
-
-    fEMCCut.SetSecTrackMatchingEtaParams(emccuts.emcSecTMEta->at(0), emccuts.emcSecTMEta->at(1), emccuts.emcSecTMEta->at(2));
-    fEMCCut.SetSecTrackMatchingPhiParams(emccuts.emcSecTMPhi->at(0), emccuts.emcSecTMPhi->at(1), emccuts.emcSecTMPhi->at(2));
-    fEMCCut.SetUseSecondaryTM(emccuts.emcUseSecondaryTM.value); // disables or enables secondary TM
+    config::configureEMCCut(fEMCCut, emccuts);
   }
 
   HistogramRegistry fRegistry{"output", {}, OutputObjHandlingPolicy::AnalysisObject, false, false};
@@ -148,8 +93,10 @@ struct EmcalQC {
   PresliceOptional<MinMSTracks> perEMCClusterMS = o2::aod::mintm::minClusterId;
   PresliceOptional<EMCalPhotons> perCollisionEMC = o2::aod::emccluster::pmeventId;
 
-  void init(InitContext&)
+  void init(InitContext& context)
   {
+    config::readGroupFromDevice(context, cfgConfigDeviceName.value, eventcuts);
+    config::readGroupFromDevice(context, cfgConfigDeviceName.value, emccuts);
 
     defineEMCCut();
     defineEMEventCut();
